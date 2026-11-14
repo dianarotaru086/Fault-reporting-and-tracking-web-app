@@ -3,10 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Gestion des pannes</title>
+    <title>Accueil - Gestion des pannes</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <h1>Gestion des pannes</h1>
-    <p>Le serveur fonctionne. Les écrans arrivent à l'étape suivante.</p>
+    <div id="contenu">
+        <h1 id="titre">Accueil</h1>
+        <p class="sous-titre" id="sous-titre"></p>
+        <div class="actions-accueil">
+            <a class="bouton" href="signaler.html">Signaler une panne</a>
+            <a class="bouton secondaire" href="liste.html">Consulter la liste des pannes</a>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        (async () => {
+            const utilisateur = await exigerConnexion();
+            if (!utilisateur) return;
+
+            document.getElementById("titre").textContent = "Bonjour, " + utilisateur.nomComplet;
+            document.getElementById("sous-titre").textContent =
+                utilisateur.role === "RESPONSABLE"
+                    ? "Consultez les pannes signalées et prenez-les en charge."
+                    : "Signalez une panne et suivez son avancement.";
+
+            afficherMiseEnPage(utilisateur, "accueil");
+        })();
+    </script>
 </body>
 </html>
