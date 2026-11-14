@@ -6,42 +6,45 @@
     <title>Connexion - Gestion des pannes</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="page-login">
-    <div class="boite-login carte">
-        <h1>🔧 Gestion des pannes</h1>
-        <p class="sous-titre">Connectez-vous pour continuer</p>
-
-        <div id="alerte" class="alerte erreur" hidden></div>
-
-        <form id="formulaire" novalidate>
-            <div id="champ-email">
-                <label for="email">E-mail</label>
-                <input type="email" id="email" autocomplete="username">
-                <div class="message-champ" id="erreur-email"></div>
+<body>
+    <div class="login">
+        <section class="gauche">
+            <div class="nom"><span class="marque"></span>Gestion des <em>pannes</em></div>
+            <div class="phrase">
+                <blockquote>Une panne signalée doit être une panne <em>suivie</em>.</blockquote>
             </div>
-            <div id="champ-motDePasse">
-                <label for="motDePasse">Mot de passe</label>
-                <input type="password" id="motDePasse" autocomplete="current-password">
-                <div class="message-champ" id="erreur-motDePasse"></div>
-            </div>
-            <button type="submit">Se connecter</button>
-        </form>
+        </section>
 
-        <div class="comptes-demo">
-            Comptes de démonstration (mot de passe : <code>demo123</code>) :<br>
-            <code>maria.ionescu@exemple.fr</code> (utilisateur)<br>
-            <code>ion.georgescu@exemple.fr</code> (responsable)
-        </div>
+        <section class="droite">
+            <h1>Connexion</h1>
+
+            <div id="alerte" class="alerte" hidden></div>
+
+            <form id="formulaire" novalidate>
+                <div id="champ-email">
+                    <label for="email">Adresse e-mail</label>
+                    <input type="email" id="email" autocomplete="username" autofocus>
+                    <div class="message-champ" id="erreur-email"></div>
+                </div>
+                <div id="champ-motDePasse">
+                    <label for="motDePasse">Mot de passe</label>
+                    <input type="password" id="motDePasse" autocomplete="current-password">
+                    <div class="message-champ" id="erreur-motDePasse"></div>
+                </div>
+                <button type="submit">Se connecter</button>
+            </form>
+        </section>
     </div>
 
     <script src="js/app.js"></script>
     <script>
         const formulaire = document.getElementById("formulaire");
         const alerte = document.getElementById("alerte");
+        const CHAMPS = ["email", "motDePasse"];
 
         function effacerErreurs() {
             alerte.hidden = true;
-            ["email", "motDePasse"].forEach(champ => {
+            CHAMPS.forEach(champ => {
                 document.getElementById("champ-" + champ).classList.remove("champ-erreur");
                 document.getElementById("erreur-" + champ).textContent = "";
             });
@@ -61,15 +64,14 @@
                 });
                 window.location.href = "index.html";
             } catch (e) {
-                // Erreurs par champ (validation côté serveur)
-                for (const [champ, message] of Object.entries(e.erreurs)) {
+                const erreurs = e.erreurs || {};
+                for (const [champ, message] of Object.entries(erreurs)) {
                     document.getElementById("champ-" + champ)?.classList.add("champ-erreur");
                     const zone = document.getElementById("erreur-" + champ);
                     if (zone) zone.textContent = message;
                 }
-                // Erreur générale (ex. mot de passe incorrect)
-                if (Object.keys(e.erreurs).length === 0) {
-                    alerte.textContent = e.message;
+                if (Object.keys(erreurs).length === 0) {
+                    alerte.textContent = e.message || "Une erreur est survenue.";
                     alerte.hidden = false;
                 }
             }

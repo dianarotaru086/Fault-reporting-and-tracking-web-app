@@ -1,17 +1,16 @@
-/* ============================================================
- * app.js : fonctions communes à toutes les pages
- *   - api()          : appelle le serveur et gère les erreurs
- *   - exigerConnexion() : renvoie vers login.html si non connecté
- *   - afficherMiseEnPage() : dessine la barre du haut et le menu
- *   - echapper()     : protège le HTML contre l'injection
- * ============================================================ */
+/* app.js : fonctions communes à toutes les pages
+ *   api()               appelle le serveur et normalise les erreurs
+ *   exigerConnexion()   renvoie vers login.html si personne n'est connecté
+ *   afficherMiseEnPage() dessine la barre du haut et le menu
+ *   echapper()          protège le HTML contre l'injection de code
+ */
 
 const LIBELLES_ROLE = {
     UTILISATEUR: "Utilisateur",
     RESPONSABLE: "Responsable technique"
 };
 
-/** Appelle l'API. En cas d'erreur, lève un objet {statut, message, erreurs}. */
+/** Appelle l'API. En cas d'erreur, lève {statut, message, erreurs}. */
 async function api(url, options = {}) {
     const config = {
         method: options.method || "GET",
@@ -46,7 +45,7 @@ function echapper(texte) {
     return div.innerHTML;
 }
 
-/** Vérifie la connexion. Si personne n'est connecté, on va sur login.html. */
+/** Vérifie la connexion ; sinon on va sur la page de connexion. */
 async function exigerConnexion() {
     try {
         return await api("/api/auth/me");
@@ -56,7 +55,7 @@ async function exigerConnexion() {
     }
 }
 
-/** Dessine la barre du haut + le menu de gauche autour du contenu de la page. */
+/** Dessine la barre du haut et le menu autour du contenu de la page. */
 function afficherMiseEnPage(utilisateur, pageActive) {
     const liens = [
         { id: "accueil", texte: "Accueil", url: "index.html" },
@@ -70,14 +69,14 @@ function afficherMiseEnPage(utilisateur, pageActive) {
     ).join("");
 
     const contenu = document.getElementById("contenu").innerHTML;
+    const role = LIBELLES_ROLE[utilisateur.role] || utilisateur.role;
 
     document.body.innerHTML = `
         <header class="barre-haut">
-            <span class="logo">🔧 Gestion des pannes</span>
-            <span class="utilisateur">
-                ${echapper(utilisateur.nomComplet)}
-                <span class="role">${echapper(LIBELLES_ROLE[utilisateur.role] || utilisateur.role)}</span>
-                <button class="discret" id="bouton-deconnexion">Déconnexion</button>
+            <span class="nom"><span class="marque"></span>Gestion des <em>pannes</em></span>
+            <span class="compte">
+                ${echapper(utilisateur.nomComplet)} <span class="role">· ${echapper(role)}</span>
+                <button id="bouton-deconnexion">Déconnexion</button>
             </span>
         </header>
         <div class="conteneur">
@@ -89,4 +88,43 @@ function afficherMiseEnPage(utilisateur, pageActive) {
         await api("/api/auth/logout", { method: "POST" });
         window.location.href = "login.html";
     });
+}
+
+/* ---------- aides pour les formulaires ---------- */
+
+/** Efface tous les messages d'erreur d'un formulaire. */
+function effacerErreurs(racine) {
+    racine.querySelectorAll(".champ-erreur").forEach(e => e.classList.remove("champ-erreur"));
+    racine.querySelectorAll(".message-champ").forEach(e => e.textContent = "");
+}
+
+/**
+ * Affiche sous chaque champ le message envoyé par le serveur.
+ * Chaque champ est un <div class="champ" data-champ="nom"> contenant un .message-champ.
+ * Renvoie le nombre de champs trouvés.
+ */
+function afficherErreursChamps(racine, erreurs) {
+    let trouves = 0;
+    for (const [nom, message] of Object.entries(erreurs || {})) {
+        const champ = racine.querySelector(`[data-champ="${nom}"]`);
+        if (!champ) continue;
+        champ.classList.add("champ-erreur");
+        champ.querySelector(".message-champ").textContent = message;
+        trouves++;
+    }
+    return trouves;
+}
+
+/** "2026-11-14T16:38:00" devient "14/11/2026". */
+function formaterDate(iso) {
+    return iso ? new Date(iso).toLocaleDateString("fr-FR") : "";
+}
+
+/** "IN_PROGRESS" devient "statut-in-progress" : la classe CSS du point de couleur. */
+function classeStatut(statut) {
+    return "statut-" + String(statut).toLowerCase().replace(/_/g, "-");
+}
+/** "2026-11-14T16:38:00" devient "14/11/2026 16:38". */
+function formaterDateHeure(iso) {
+    return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
 }

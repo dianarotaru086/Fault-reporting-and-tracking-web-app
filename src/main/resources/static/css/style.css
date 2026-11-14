@@ -1,0 +1,303 @@
+/* Gestion des pannes - feuille de style
+   Idée : un carnet d'atelier. Papier chaud, encre foncée, un orange de
+   signalisation pour tout ce qui demande l'attention. */
+
+:root {
+    --papier: #f4f0e8;
+    --papier-fonce: #ebe5d8;
+    --blanc: #fffdf9;
+    --encre: #1f2a2e;
+    --doux: #3b464a;
+    --trait: #d8d1c2;
+    --signal: #c8471a;
+    --signal-fonce: #a63a14;
+    --vert: #2f6b45;
+    --ambre: #b7791f;
+    --erreur: #a4262c;
+    --titres: Georgia, "Times New Roman", serif;
+    --texte: "Segoe UI", system-ui, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: var(--texte);
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--encre);
+    background: var(--papier);
+}
+
+a { color: var(--encre); text-decoration-color: var(--signal); text-underline-offset: 3px; }
+a:hover { color: var(--signal-fonce); }
+
+/* ---------- marque ---------- */
+.nom { font-family: var(--titres); font-size: 20px; display: flex; align-items: center; gap: 10px; }
+.nom em { color: inherit; font-style: italic; }
+.marque {
+    width: 13px; height: 13px;
+    background: var(--signal);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+}
+
+/* ---------- barre du haut ---------- */
+.barre-haut {
+    background: #e9e2d3;
+    color: var(--encre);
+    height: 58px;
+    padding: 0 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--trait);
+}
+.barre-haut .nom em { color: var(--signal); }
+.barre-haut .compte { font-size: 15px; }
+.barre-haut .compte .role { color: inherit; }
+.barre-haut .compte button {
+    background: transparent;
+    border: 1px solid var(--encre);
+    color: var(--encre);
+    padding: 4px 12px;
+    margin-left: 14px;
+    border-radius: 3px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+.barre-haut .compte button:hover { background: var(--encre); color: var(--papier); }
+
+/* ---------- menu + contenu ---------- */
+.conteneur { display: flex; min-height: calc(100vh - 58px); }
+
+.menu {
+    width: 240px;
+    flex-shrink: 0;
+    padding: 30px 0;
+    border-right: 1px solid var(--trait);
+}
+.menu a {
+    display: block;
+    padding: 11px 26px;
+    font-size: 17px;
+    text-decoration: none;
+    border-left: 4px solid transparent;
+}
+.menu a:hover { background: var(--papier-fonce); color: var(--encre); }
+.menu a.actif {
+    border-left-color: var(--signal);
+    background: var(--papier-fonce);
+    font-weight: 600;
+}
+
+main.contenu { flex: 1; padding: 34px 48px; max-width: 1020px; }
+
+h1 {
+    font-family: var(--titres);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 6px;
+}
+h2 { font-family: var(--titres); font-size: 20px; margin: 28px 0 8px; }
+.sous-titre { margin: 0 0 26px; color: var(--doux); font-size: 17px; max-width: 56ch; }
+
+/* ---------- formulaires ---------- */
+label { display: block; margin: 18px 0 5px; font-weight: 600; }
+
+input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #9b9480;
+    border-radius: 3px;
+    background: var(--blanc);
+    font: inherit;
+    color: var(--encre);
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--signal);
+    box-shadow: 0 0 0 3px rgba(200, 71, 26, .18);
+}
+.champ-erreur input, .champ-erreur select, .champ-erreur textarea { border-color: var(--erreur); }
+.message-champ { color: var(--erreur); font-size: 14px; margin-top: 4px; }
+
+button, .bouton {
+    display: inline-block;
+    background: var(--signal);
+    color: #fff;
+    border: 1.5px solid var(--signal-fonce);
+    border-radius: 3px;
+    padding: 10px 22px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+button:hover, .bouton:hover { background: var(--signal-fonce); color: #fff; }
+.bouton.secondaire, button.secondaire {
+    background: transparent;
+    color: var(--encre);
+    border-color: var(--encre);
+}
+.bouton.secondaire:hover, button.secondaire:hover { background: var(--encre); color: var(--papier); }
+
+.alerte {
+    background: var(--blanc);
+    border: 1px solid var(--trait);
+    border-left: 5px solid var(--erreur);
+    padding: 11px 16px;
+    margin: 16px 0;
+}
+.alerte.succes { border-left-color: var(--vert); }
+
+/* ---------- tableaux ---------- */
+table { width: 100%; border-collapse: collapse; background: var(--blanc); }
+th, td { padding: 11px 14px; border-bottom: 1px solid var(--trait); text-align: left; }
+th {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--doux);
+    background: var(--papier-fonce);
+    border-bottom: 2px solid #c9c1ae;
+}
+tbody tr:hover { background: #faf6ee; }
+
+/* ---------- statuts : un point de couleur + le mot ---------- */
+.statut::before {
+    content: "";
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background: var(--doux);
+}
+.statut-new::before { background: var(--signal); }
+.statut-in-progress::before { background: var(--ambre); }
+.statut-done::before { background: var(--vert); }
+
+/* ---------- accueil : liste d'actions ---------- */
+.actions { border-top: 1px solid var(--trait); max-width: 640px; margin-top: 24px; }
+.actions a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 4px;
+    border-bottom: 1px solid var(--trait);
+    text-decoration: none;
+}
+.actions a strong { font-family: var(--titres); font-size: 21px; font-weight: 700; }
+.actions a::after { content: "\2192"; color: var(--signal); font-size: 22px; transition: transform .15s; }
+.actions a:hover { background: var(--papier-fonce); }
+.actions a:hover::after { transform: translateX(5px); }
+
+/* ---------- page de connexion ---------- */
+.login { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 100vh; }
+
+/* panneau de gauche : presque la couleur du papier, à peine plus chaud */
+.login .gauche {
+    background: #e9e2d3;
+    color: var(--encre);
+    padding: 36px 56px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--trait);
+}
+.login .gauche .nom em { color: var(--signal); }
+.login .gauche .phrase { margin: auto 0; }
+.login .gauche blockquote {
+    margin: 0;
+    font-family: var(--titres);
+    font-size: 42px;
+    line-height: 1.18;
+    max-width: 14em;
+}
+.login .gauche blockquote em { color: var(--signal); }
+
+.login .droite { padding: 80px 64px; max-width: 560px; align-self: center; width: 100%; }
+.login .droite h1 { margin-bottom: 14px; }
+.login .droite button[type=submit] { margin-top: 24px; width: 100%; padding: 12px; font-size: 17px; }
+
+@media (max-width: 860px) {
+    .login { grid-template-columns: 1fr; }
+    .login .gauche { padding: 24px 28px 34px; gap: 40px; }
+    .login .gauche blockquote { font-size: 30px; }
+    .login .droite { padding: 34px 28px; }
+    .menu { width: 180px; }
+    main.contenu { padding: 24px; }
+}
+
+/* ---------- formulaire de signalement ---------- */
+.formulaire-page { max-width: 640px; }
+.formulaire-page textarea { min-height: 140px; resize: vertical; }
+.deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.boutons { margin-top: 28px; display: flex; align-items: center; gap: 12px; }
+
+/* ---------- liste des pannes ---------- */
+.filtres {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+    margin: 22px 0 18px;
+}
+.filtres label { margin: 0 0 4px; }
+.filtres .boutons { margin: 0; }
+.resultat { margin: 0 0 10px; font-weight: 600; }
+.tableau { overflow-x: auto; }
+.tableau a { font-weight: 600; }
+.priorite-haute { color: var(--signal-fonce); font-weight: 600; }
+.vide { padding: 22px 4px; }
+
+@media (max-width: 980px) {
+    .filtres { grid-template-columns: 1fr 1fr; }
+}
+/* ---------- détail d'une panne ---------- */
+.retour { margin: 0 0 14px; }
+.infos {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 8px 20px;
+    margin: 18px 0 6px;
+}
+.infos dt { font-weight: 600; }
+.infos dd { margin: 0; }
+.description { white-space: pre-wrap; max-width: 62ch; margin: 0; }
+
+.zone-action { border-top: 1px solid var(--trait); margin-top: 30px; padding-top: 4px; max-width: 520px; }
+.zone-action textarea { min-height: 90px; resize: vertical; }
+.zone-action button { margin-top: 14px; }
+
+.historique {
+    list-style: none;
+    margin: 12px 0 0 6px;
+    padding: 0;
+    border-left: 2px solid var(--trait);
+}
+.historique li { position: relative; padding: 0 0 18px 20px; }
+.historique li::before {
+    content: "";
+    position: absolute;
+    left: -7px; top: 7px;
+    width: 12px; height: 12px;
+    background: var(--signal);
+    transform: rotate(45deg);
+}
+.historique .quand { font-size: 14px; }
+.historique .quoi { font-weight: 600; }
+.historique .commentaire { margin: 4px 0 0; white-space: pre-wrap; }
+/* L'attribut hidden doit toujours gagner, même sur les boutons */
+[hidden] { display: none !important; }
+
+.confirmation {
+    border-left: 4px solid var(--signal);
+    background: var(--blanc);
+    padding: 12px 16px;
+    margin-top: 14px;
+}
+.confirmation p { margin: 0 0 12px; font-weight: 600; }
+.confirmation button { margin: 0 10px 0 0; }

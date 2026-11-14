@@ -9,11 +9,18 @@
 <body>
     <div id="contenu">
         <h1 id="titre">Accueil</h1>
-        <p class="sous-titre" id="sous-titre"></p>
-        <div class="actions-accueil">
-            <a class="bouton" href="signaler.html">Signaler une panne</a>
-            <a class="bouton secondaire" href="liste.html">Consulter la liste des pannes</a>
-        </div>
+
+        <nav class="actions">
+            <a href="signaler.html">
+                <strong>Signaler une panne</strong>
+            </a>
+            <a href="liste.html">
+                <strong>Liste des pannes</strong>
+            </a>
+            <a href="mes-pannes.html">
+                <strong>Mes pannes</strong>
+            </a>
+        </nav>
     </div>
 
     <script src="js/app.js"></script>
@@ -23,10 +30,6 @@
             if (!utilisateur) return;
 
             document.getElementById("titre").textContent = "Bonjour, " + utilisateur.nomComplet;
-            document.getElementById("sous-titre").textContent =
-                utilisateur.role === "RESPONSABLE"
-                    ? "Consultez les pannes signalées et prenez-les en charge."
-                    : "Signalez une panne et suivez son avancement.";
 
             afficherMiseEnPage(utilisateur, "accueil");
         })();

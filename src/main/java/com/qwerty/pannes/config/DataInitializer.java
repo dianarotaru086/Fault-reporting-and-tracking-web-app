@@ -14,7 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
- * Comptes de démonstration (mot de passe pour tous: demo123) :
+ * Charge des données d'exemple au premier démarrage (base vide).
+ * Indispensable pour la séance de tests de la semaine 11 et pour la soutenance.
+ *
+ * Comptes de démonstration (mot de passe pour tous : demo123) :
  *   maria.ionescu@exemple.fr    - UTILISATEUR
  *   andrei.popescu@exemple.fr   - UTILISATEUR
  *   ion.georgescu@exemple.fr    - RESPONSABLE

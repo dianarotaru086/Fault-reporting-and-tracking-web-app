@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Signaler une panne - Gestion des pannes</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="contenu">
+        <h1>Signaler une panne</h1>
+
+        <div class="formulaire-page">
+            <div id="alerte" class="alerte" hidden></div>
+
+            <form id="formulaire" novalidate>
+                <div class="champ" data-champ="titre">
+                    <label for="titre">Titre</label>
+                    <input type="text" id="titre" autocomplete="off">
+                    <div class="message-champ"></div>
+                </div>
+
+                <div class="champ" data-champ="description">
+                    <label for="description">Description</label>
+                    <textarea id="description"></textarea>
+                    <div class="message-champ"></div>
+                </div>
+
+                <div class="champ" data-champ="lieu">
+                    <label for="lieu">Lieu</label>
+                    <input type="text" id="lieu" autocomplete="off">
+                    <div class="message-champ"></div>
+                </div>
+
+                <div class="deux-colonnes">
+                    <div class="champ" data-champ="categorie">
+                        <label for="categorie">Catégorie</label>
+                        <select id="categorie"></select>
+                        <div class="message-champ"></div>
+                    </div>
+                    <div class="champ" data-champ="priorite">
+                        <label for="priorite">Priorité</label>
+                        <select id="priorite"></select>
+                        <div class="message-champ"></div>
+                    </div>
+                </div>
+
+                <div class="boutons">
+                    <button type="submit">Signaler</button>
+                    <a class="bouton secondaire" href="index.html">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        (async () => {
+            const utilisateur = await exigerConnexion();
+            if (!utilisateur) return;
+
+            // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
+            afficherMiseEnPage(utilisateur, "signaler");
+
+            const formulaire = document.getElementById("formulaire");
+            const alerte = document.getElementById("alerte");
+
+            // Remplit un menu déroulant avec une option vide au début
+            function remplir(select, options) {
+                select.innerHTML = '<option value="" selected disabled>Choisir…</option>' +
+                    options.map(o => `<option value="${echapper(o.code)}">${echapper(o.libelle)}</option>`).join("");
+            }
+
+            try {
+                const references = await api("/api/references");
+                remplir(document.getElementById("categorie"), references.categories);
+                remplir(document.getElementById("priorite"), references.priorites);
+            } catch (e) {
+                alerte.textContent = e.message;
+                alerte.hidden = false;
+            }
+
+            formulaire.addEventListener("submit", async (evenement) => {
+                evenement.preventDefault();
+                effacerErreurs(formulaire);
+                alerte.hidden = true;
+                alerte.classList.remove("succes");
+
+                try {
+                    const panne = await api("/api/pannes", {
+                        method: "POST",
+                        corps: {
+                            titre: document.getElementById("titre").value,
+                            description: document.getElementById("description").value,
+                            lieu: document.getElementById("lieu").value,
+                            categorie: document.getElementById("categorie").value || null,
+                            priorite: document.getElementById("priorite").value || null
+                        }
+                    });
+                    formulaire.reset();
+                    alerte.classList.add("succes");
+                    alerte.textContent = `La panne n° ${panne.id} a été enregistrée (statut : ${panne.statutLibelle}).`;
+                    alerte.hidden = false;
+                    window.scrollTo(0, 0);
+                } catch (e) {
+                    const trouves = afficherErreursChamps(formulaire, e.erreurs);
+                    if (trouves === 0) {
+                        alerte.textContent = e.message;
+                        alerte.hidden = false;
+                    }
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
