@@ -3,8 +3,10 @@ package com.qwerty.pannes.service;
 import com.qwerty.pannes.model.*;
 import com.qwerty.pannes.repository.InterventionRepository;
 import com.qwerty.pannes.repository.PanneRepository;
+import com.qwerty.pannes.repository.UniteRepository;
 import com.qwerty.pannes.repository.UtilisateurRepository;
 import com.qwerty.pannes.web.InterventionDto;
+import com.qwerty.pannes.web.MesPannesDto;
 import com.qwerty.pannes.web.PanneDetailDto;
 import com.qwerty.pannes.web.PanneDto;
 import com.qwerty.pannes.web.PanneRequest;
@@ -15,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.qwerty.pannes.web.MesPannesDto;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
@@ -32,12 +33,14 @@ public class PanneService {
     private final PanneRepository pannes;
     private final UtilisateurRepository utilisateurs;
     private final InterventionRepository interventions;
+    private final UniteRepository unites;
 
     public PanneService(PanneRepository pannes, UtilisateurRepository utilisateurs,
-                        InterventionRepository interventions) {
+                        InterventionRepository interventions, UniteRepository unites) {
         this.pannes = pannes;
         this.utilisateurs = utilisateurs;
         this.interventions = interventions;
+        this.unites = unites;
     }
 
     // ------------------------------------------------------------------
@@ -52,13 +55,15 @@ public class PanneService {
     public PanneDto signaler(PanneRequest demande, Long utilisateurId) {
         Utilisateur signaleur = connecte(utilisateurId);
 
-        Panne panne = pannes.save(new Panne(
+        Panne panne = new Panne(
                 demande.titre().trim(),
                 demande.description().trim(),
                 demande.lieu().trim(),
                 demande.categorie(),
                 demande.priorite(),
-                signaleur));
+                signaleur);
+        panne.setUnite(trouverUnite(demande.uniteId()));
+        panne = pannes.save(panne);
 
         interventions.save(new Intervention(
                 panne, signaleur, TypeAction.SIGNALEMENT, null, panne.getDateSignalement()));
@@ -66,10 +71,30 @@ public class PanneService {
         return PanneDto.de(panne);
     }
 
+    // ------------------------------------------------------------------
+    // Liste, recherche et filtres
+    // ------------------------------------------------------------------
+
+    /**
+     * Liste les pannes, de la plus récente à la plus ancienne, en combinant les critères.
+     * Un critère absent (null) est simplement ignoré. Les critères présents s'ajoutent (ET).
+     *
+     * Les filtres campus / faculté / catégorie / statut / priorité sont appliqués par la base.
+     * La recherche texte est appliquée ensuite en Java : elle ignore majuscules, accents
+     * et ponctuation (« electricite » trouve « Électricité », « wifi » trouve « Wi-Fi »).
+     */
     @Transactional(readOnly = true)
-    public List<PanneDto> lister(String recherche, Categorie categorie, Statut statut, Priorite priorite) {
+    public List<PanneDto> lister(String recherche, Long campusId, Long uniteId,
+                                 Categorie categorie, Statut statut, Priorite priorite) {
         Specification<Panne> spec = (root, query, cb) -> cb.conjunction();
 
+        if (campusId != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("unite").get("campus").get("id"), campusId));
+        }
+        if (uniteId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("unite").get("id"), uniteId));
+        }
         if (categorie != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("categorie"), categorie));
         }
@@ -82,18 +107,29 @@ public class PanneService {
 
         String cherche = normaliser(recherche);
 
-        return pannes.findAll(spec, Sort.by(Sort.Direction.DESC, "dateSignalement"))
+        return pannes.findAll(spec, Sort.by(Sort.Order.desc("dateSignalement"), Sort.Order.desc("id")))
                 .stream()
                 .filter(p -> cherche.isEmpty() || correspond(p, cherche))
                 .map(PanneDto::de)
                 .toList();
     }
 
+    /** Le détail d'une panne, avec son historique et les droits de l'utilisateur connecté. */
     @Transactional(readOnly = true)
     public PanneDetailDto detail(Long panneId, Long utilisateurId) {
         return construireDetail(trouver(panneId), connecte(utilisateurId));
     }
 
+    // ------------------------------------------------------------------
+    // Prise en charge et résolution
+    // ------------------------------------------------------------------
+
+    /**
+     * RÈGLES SPÉCIFIQUES :
+     *  1. un responsable ne prend en charge que les pannes de SON campus (403 sinon) ;
+     *  2. une panne ne peut être prise que si elle est encore New : si un autre responsable
+     *     l'a déjà prise, la demande est refusée (409) avec son nom.
+     */
     @Transactional
     public PanneDetailDto prendreEnCharge(Long panneId, Long utilisateurId) {
         Utilisateur responsable = connecte(utilisateurId);
@@ -104,6 +140,9 @@ public class PanneService {
 
         Panne panne = trouver(panneId);
 
+        if (!memeCampus(responsable, panne)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, messageCampus(responsable, panne));
+        }
         if (panne.getStatut() == Statut.DONE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cette panne est déjà résolue.");
         }
@@ -186,6 +225,7 @@ public class PanneService {
 
         panne.setTitre(demande.titre().trim());
         panne.setDescription(demande.description().trim());
+        panne.setUnite(trouverUnite(demande.uniteId()));
         panne.setLieu(demande.lieu().trim());
         panne.setCategorie(demande.categorie());
         panne.setPriorite(demande.priorite());
@@ -220,6 +260,13 @@ public class PanneService {
         return pannes.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Panne introuvable."));
     }
+
+    /** La faculté ou le service choisi ; l'erreur s'affiche sous le champ concerné. */
+    private Unite trouverUnite(Long id) {
+        return unites.findById(id)
+                .orElseThrow(() -> new ErreurChamp("uniteId", "Faculté ou service inconnu."));
+    }
+
     /**
      * RÈGLE : seule la personne qui a signalé la panne peut la modifier ou la supprimer,
      * et seulement tant que personne ne l'a prise en charge (statut New).
@@ -238,6 +285,33 @@ public class PanneService {
         return panne;
     }
 
+    /** Le campus de la panne (celui de sa faculté), ou null si elle n'est rattachée à aucune. */
+    private static Campus campusDe(Panne panne) {
+        return panne.getUnite() == null ? null : panne.getUnite().getCampus();
+    }
+
+    /** Vrai si la panne relève du campus du responsable. */
+    private static boolean memeCampus(Utilisateur responsable, Panne panne) {
+        Campus campusPanne = campusDe(panne);
+        if (campusPanne == null) {
+            return true;   // ancienne panne sans campus : pas de restriction
+        }
+        return responsable.getCampus() != null
+                && responsable.getCampus().getId().equals(campusPanne.getId());
+    }
+
+    /** "Noul Local (campus principal)" devient "Noul Local" dans les messages. */
+    private static String nomCourt(Campus campus) {
+        return campus.getNom().replaceAll("\\s*\\(.*?\\)", "");
+    }
+
+    private static String messageCampus(Utilisateur responsable, Panne panne) {
+        String sien = responsable.getCampus() == null
+                ? "Votre compte n'est rattaché à aucun campus."
+                : "Vous êtes responsable du campus " + nomCourt(responsable.getCampus()) + ".";
+        return "Cette panne relève du campus " + nomCourt(campusDe(panne)) + ". " + sien;
+    }
+
     /** Assemble la panne, son historique et ce que l'utilisateur a le droit d'en faire. */
     private PanneDetailDto construireDetail(Panne panne, Utilisateur utilisateur) {
         List<InterventionDto> historique = interventions
@@ -249,13 +323,18 @@ public class PanneService {
         boolean estLeResponsableDeLaPanne = panne.getResponsable() != null
                 && panne.getResponsable().getId().equals(utilisateur.getId());
         boolean estLeSignaleur = panne.getSignaleur().getId().equals(utilisateur.getId());
+        boolean bonCampus = memeCampus(utilisateur, panne);
+
+        String avertissement = estResponsableTechnique && panne.getStatut() == Statut.NEW && !bonCampus
+                ? messageCampus(utilisateur, panne) : null;
 
         return new PanneDetailDto(
                 PanneDto.de(panne),
                 historique,
-                estResponsableTechnique && panne.getStatut() == Statut.NEW,
+                estResponsableTechnique && panne.getStatut() == Statut.NEW && bonCampus,
                 estLeResponsableDeLaPanne && panne.getStatut() == Statut.IN_PROGRESS,
-                estLeSignaleur && panne.getStatut() == Statut.NEW);
+                estLeSignaleur && panne.getStatut() == Statut.NEW,
+                avertissement);
     }
 
     /** Vrai si le texte cherché apparaît dans le titre, la description, le lieu ou la catégorie. */

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mon profil - Gestion des pannes</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="contenu">
+    <h1>Mon profil</h1>
+    <div id="alerte" class="alerte" hidden></div>
+
+    <div class="profil">
+        <div class="profil-photo">
+            <div id="avatar"></div>
+            <input type="file" id="fichier-photo" accept="image/jpeg,image/png" hidden>
+            <button type="button" class="secondaire" id="bouton-photo">Changer la photo</button>
+        </div>
+
+        <div class="profil-corps">
+            <div id="vue">
+                <dl class="infos" id="infos"></dl>
+                <button type="button" id="bouton-modifier">Modifier</button>
+            </div>
+
+            <form id="formulaire-profil" novalidate hidden>
+                <div class="champ" data-champ="nom">
+                    <label for="nom">Nom</label>
+                    <input type="text" id="nom" autocomplete="family-name">
+                    <div class="message-champ"></div>
+                </div>
+                <div class="champ" data-champ="prenom">
+                    <label for="prenom">Prénom</label>
+                    <input type="text" id="prenom" autocomplete="given-name">
+                    <div class="message-champ"></div>
+                </div>
+                <div class="champ" data-champ="email">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" autocomplete="email">
+                    <div class="message-champ"></div>
+                </div>
+                <div class="champ" data-champ="telephone">
+                    <label for="telephone">Téléphone</label>
+                    <input type="tel" id="telephone" autocomplete="tel">
+                    <div class="message-champ"></div>
+                </div>
+                <div id="zone-affectation">
+                    <div class="champ" data-champ="campusId">
+                        <label for="campusId">Campus</label>
+                        <select id="campusId"></select>
+                        <div class="message-champ"></div>
+                    </div>
+                    <div class="champ" data-champ="uniteId">
+                        <label for="uniteId">Faculté ou service</label>
+                        <select id="uniteId"></select>
+                        <div class="message-champ"></div>
+                    </div>
+                </div>
+                <div class="boutons">
+                    <button type="submit">Enregistrer</button>
+                    <button type="button" class="secondaire" id="annuler-profil">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="zone-action profil-mdp">
+        <button type="button" class="secondaire" id="bouton-mdp">Changer le mot de passe</button>
+
+        <form id="formulaire-mdp" novalidate hidden>
+            <div class="champ" data-champ="motDePasseActuel">
+                <label for="mdp-actuel">Mot de passe actuel</label>
+                <input type="password" id="mdp-actuel" autocomplete="current-password">
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="nouveauMotDePasse">
+                <label for="mdp-nouveau">Nouveau mot de passe</label>
+                <input type="password" id="mdp-nouveau" autocomplete="new-password">
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="confirmation">
+                <label for="mdp-confirmation">Confirmer le nouveau mot de passe</label>
+                <input type="password" id="mdp-confirmation" autocomplete="new-password">
+                <div class="message-champ"></div>
+            </div>
+            <div class="boutons">
+                <button type="submit">Enregistrer</button>
+                <button type="button" class="secondaire" id="annuler-mdp">Annuler</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+    (async () => {
+        const utilisateur = await exigerConnexion();
+        if (!utilisateur) return;
+
+        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
+        afficherMiseEnPage(utilisateur, "profil");
+
+        const alerte = document.getElementById("alerte");
+        const vue = document.getElementById("vue");
+        const formProfil = document.getElementById("formulaire-profil");
+        const formMdp = document.getElementById("formulaire-mdp");
+        const boutonMdp = document.getElementById("bouton-mdp");
+        const fichierPhoto = document.getElementById("fichier-photo");
+        const selectCampus = document.getElementById("campusId");
+        const selectUnite = document.getElementById("uniteId");
+        let structure = [];
+        let profil = null;
+
+        function montrer(message, succes) {
+            alerte.textContent = message;
+            alerte.classList.toggle("succes", !!succes);
+            alerte.hidden = false;
+            window.scrollTo(0, 0);
+        }
+
+        // Message de réussite après un rechargement (ex. profil.html?ok=photo)
+        const MESSAGES_OK = {
+            profil: "Vos informations ont été mises à jour.",
+            photo: "Votre photo a été mise à jour.",
+            mdp: "Votre mot de passe a été modifié."
+        };
+        const ok = new URLSearchParams(window.location.search).get("ok");
+        if (MESSAGES_OK[ok]) {
+            montrer(MESSAGES_OK[ok], true);
+            window.history.replaceState(null, "", "profil.html");
+        }
+
+        function afficherProfil(p) {
+            profil = p;
+
+            document.getElementById("avatar").outerHTML = p.photoUrl
+                ? `<img id="avatar" class="avatar" src="${echapper(p.photoUrl)}" alt="Photo de profil">`
+                : `<div id="avatar" class="avatar">${echapper(initiales(p.prenom + " " + p.nom))}</div>`;
+
+            document.getElementById("infos").innerHTML = `
+                    <dt>Nom</dt><dd>${echapper(p.nom)}</dd>
+                    <dt>Prénom</dt><dd>${echapper(p.prenom)}</dd>
+                    <dt>E-mail</dt><dd>${echapper(p.email)}</dd>
+                    <dt>Téléphone</dt><dd>${p.telephone ? echapper(p.telephone) : "Non renseigné"}</dd>
+                    <dt>Rôle</dt><dd>${echapper(p.roleLibelle)}</dd>
+                    <dt>Campus</dt><dd>${p.campus ? echapper(p.campus) : "Non renseigné"}</dd>
+                    <dt>Faculté / service</dt><dd>${p.unite ? echapper(p.unite) : "Non renseigné"}</dd>
+                    <dt>Inscrit le</dt><dd>${formaterDate(p.dateInscription)}</dd>`;
+        }
+
+        // La liste des facultés dépend du campus choisi
+        function remplirUnites(campusId, uniteId) {
+            selectUnite.innerHTML = '<option value="" selected disabled>Choisir…</option>';
+            const campus = structure.find(c => String(c.id) === String(campusId));
+            if (!campus) {
+                selectUnite.options[0].textContent = "Choisissez d'abord un campus";
+                selectUnite.disabled = true;
+                return;
+            }
+            campus.unites.forEach(u => selectUnite.add(new Option(u.nom, u.id)));
+            selectUnite.disabled = false;
+            if (uniteId) selectUnite.value = uniteId;
+        }
+        selectCampus.addEventListener("change", () => remplirUnites(selectCampus.value, null));
+
+        // ---------- informations personnelles ----------
+        document.getElementById("bouton-modifier").addEventListener("click", () => {
+            document.getElementById("nom").value = profil.nom;
+            document.getElementById("prenom").value = profil.prenom;
+            document.getElementById("email").value = profil.email;
+            document.getElementById("telephone").value = profil.telephone || "";
+
+            // Un utilisateur choisit son campus et sa faculté ; pour un responsable,
+            // le campus est attribué par l'administrateur : on ne le montre pas ici.
+            const modifiable = profil.role === "UTILISATEUR";
+            document.getElementById("zone-affectation").hidden = !modifiable;
+            if (modifiable) {
+                selectCampus.length = 0;
+                selectCampus.add(new Option("Choisir…", ""));
+                selectCampus.options[0].disabled = true;
+                structure.forEach(c => selectCampus.add(new Option(c.nom, c.id)));
+                selectCampus.value = profil.campusId || "";
+                remplirUnites(profil.campusId, profil.uniteId);
+            }
+
+            effacerErreurs(formProfil);
+            vue.hidden = true;
+            formProfil.hidden = false;
+        });
+        document.getElementById("annuler-profil").addEventListener("click", () => {
+            formProfil.hidden = true;
+            vue.hidden = false;
+        });
+        formProfil.addEventListener("submit", async (evenement) => {
+            evenement.preventDefault();
+            effacerErreurs(formProfil);
+            alerte.hidden = true;
+            try {
+                await api("/api/profil", {
+                    method: "PUT",
+                    corps: {
+                        nom: document.getElementById("nom").value,
+                        prenom: document.getElementById("prenom").value,
+                        email: document.getElementById("email").value,
+                        telephone: document.getElementById("telephone").value,
+                        campusId: selectCampus.value ? Number(selectCampus.value) : null,
+                        uniteId: selectUnite.value ? Number(selectUnite.value) : null
+                    }
+                });
+                window.location.href = "profil.html?ok=profil";
+            } catch (e) {
+                if (afficherErreursChamps(formProfil, e.erreurs) === 0) montrer(e.message, false);
+            }
+        });
+
+        // ---------- photo ----------
+        document.getElementById("bouton-photo").addEventListener("click", () => fichierPhoto.click());
+        fichierPhoto.addEventListener("change", async () => {
+            const fichier = fichierPhoto.files[0];
+            if (!fichier) return;
+            alerte.hidden = true;
+
+            const donnees = new FormData();
+            donnees.append("photo", fichier);
+            try {
+                await api("/api/profil/photo", { method: "POST", formulaire: donnees });
+                window.location.href = "profil.html?ok=photo";
+            } catch (e) {
+                montrer(Object.values(e.erreurs || {})[0] || e.message, false);
+                fichierPhoto.value = "";
+            }
+        });
+
+        // ---------- mot de passe ----------
+        boutonMdp.addEventListener("click", () => {
+            effacerErreurs(formMdp);
+            boutonMdp.hidden = true;
+            formMdp.hidden = false;
+        });
+        document.getElementById("annuler-mdp").addEventListener("click", () => {
+            formMdp.reset();
+            formMdp.hidden = true;
+            boutonMdp.hidden = false;
+        });
+        formMdp.addEventListener("submit", async (evenement) => {
+            evenement.preventDefault();
+            effacerErreurs(formMdp);
+            alerte.hidden = true;
+            try {
+                await api("/api/profil/mot-de-passe", {
+                    method: "PUT",
+                    corps: {
+                        motDePasseActuel: document.getElementById("mdp-actuel").value,
+                        nouveauMotDePasse: document.getElementById("mdp-nouveau").value,
+                        confirmation: document.getElementById("mdp-confirmation").value
+                    }
+                });
+                window.location.href = "profil.html?ok=mdp";
+            } catch (e) {
+                if (afficherErreursChamps(formMdp, e.erreurs) === 0) montrer(e.message, false);
+            }
+        });
+
+        // ---------- chargement initial ----------
+        try {
+            structure = await api("/api/structure");
+            afficherProfil(await api("/api/profil"));
+        } catch (e) {
+            montrer(e.message, false);
+        }
+    })();
+</script>
+</body>
+</html>

@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import com.qwerty.pannes.service.ErreurChamp;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -51,5 +53,20 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, Object>> conflit(OptimisticLockingFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("message", "Cette panne vient d'être modifiée par quelqu'un d'autre. Rechargez la page."));
+    }
+    /** Erreur liée à un champ précis, détectée par la logique métier (ex. e-mail déjà utilisé). */
+    @ExceptionHandler(ErreurChamp.class)
+    public ResponseEntity<Map<String, Object>> champ(ErreurChamp ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Certains champs sont invalides.",
+                        "erreurs", Map.of(ex.getChamp(), ex.getMessage())));
+    }
+
+    /** Fichier envoyé trop volumineux (limite fixée dans application.properties). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> fichierTropGros(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "La photo ne doit pas dépasser 2 Mo.",
+                        "erreurs", Map.of("photo", "La photo ne doit pas dépasser 2 Mo.")));
     }
 }

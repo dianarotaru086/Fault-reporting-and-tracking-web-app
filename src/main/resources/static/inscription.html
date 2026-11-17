@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Créer un compte - Gestion des pannes</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="login">
+    <section class="gauche">
+        <div class="nom"><span class="marque"></span>Gestion des <em>pannes</em></div>
+        <div class="phrase">
+            <blockquote>Une panne signalée doit être une panne <em>suivie</em>.</blockquote>
+        </div>
+    </section>
+
+    <section class="droite">
+        <h1>Créer un compte</h1>
+        <p>Université Nationale de Science et Technologie POLITEHNICA de Bucarest</p>
+
+        <div id="alerte" class="alerte" hidden></div>
+
+        <form id="formulaire" novalidate>
+            <div class="champ" data-champ="prenom">
+                <label for="prenom">Prénom</label>
+                <input type="text" id="prenom" autocomplete="given-name" autofocus>
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="nom">
+                <label for="nom">Nom</label>
+                <input type="text" id="nom" autocomplete="family-name">
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="email">
+                <label for="email">Adresse e-mail</label>
+                <input type="email" id="email" autocomplete="email">
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="campusId">
+                <label for="campusId">Campus</label>
+                <select id="campusId">
+                    <option value="" selected disabled>Choisir…</option>
+                </select>
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="uniteId">
+                <label for="uniteId">Faculté ou service</label>
+                <select id="uniteId" disabled>
+                    <option value="" selected disabled>Choisissez d'abord un campus</option>
+                </select>
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="motDePasse">
+                <label for="motDePasse">Mot de passe (8 caractères minimum)</label>
+                <input type="password" id="motDePasse" autocomplete="new-password">
+                <div class="message-champ"></div>
+            </div>
+            <div class="champ" data-champ="confirmation">
+                <label for="confirmation">Confirmer le mot de passe</label>
+                <input type="password" id="confirmation" autocomplete="new-password">
+                <div class="message-champ"></div>
+            </div>
+            <button type="submit">Créer mon compte</button>
+        </form>
+
+        <p class="lien-bas">Vous avez déjà un compte ? <a href="login.html">Se connecter</a></p>
+    </section>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+    const formulaire = document.getElementById("formulaire");
+    const alerte = document.getElementById("alerte");
+    const selectCampus = document.getElementById("campusId");
+    const selectUnite = document.getElementById("uniteId");
+    let structure = [];
+
+    // Les campus et leurs facultés viennent du serveur
+    (async () => {
+        try {
+            structure = await api("/api/structure");
+            structure.forEach(c => selectCampus.add(new Option(c.nom + " - " + c.adresse, c.id)));
+        } catch (e) {
+            alerte.textContent = "Impossible de charger la liste des campus.";
+            alerte.hidden = false;
+        }
+    })();
+
+    // Quand le campus change, la liste des facultés change avec lui
+    selectCampus.addEventListener("change", () => {
+        const campus = structure.find(c => String(c.id) === selectCampus.value);
+        selectUnite.length = 1;                       // garde seulement "Choisir…"
+        selectUnite.options[0].textContent = "Choisir…";
+        campus.unites.forEach(u => selectUnite.add(new Option(u.nom, u.id)));
+        selectUnite.selectedIndex = 0;
+        selectUnite.disabled = false;
+    });
+
+    formulaire.addEventListener("submit", async (evenement) => {
+        evenement.preventDefault();
+        effacerErreurs(formulaire);
+        alerte.hidden = true;
+
+        try {
+            await api("/api/auth/inscription", {
+                method: "POST",
+                corps: {
+                    prenom: document.getElementById("prenom").value,
+                    nom: document.getElementById("nom").value,
+                    email: document.getElementById("email").value,
+                    campusId: selectCampus.value ? Number(selectCampus.value) : null,
+                    uniteId: selectUnite.value ? Number(selectUnite.value) : null,
+                    motDePasse: document.getElementById("motDePasse").value,
+                    confirmation: document.getElementById("confirmation").value
+                }
+            });
+            window.location.href = "index.html";
+        } catch (e) {
+            if (afficherErreursChamps(formulaire, e.erreurs) === 0) {
+                alerte.textContent = e.message || "Une erreur est survenue.";
+                alerte.hidden = false;
+            }
+        }
+    });
+</script>
+</body>
+</html>

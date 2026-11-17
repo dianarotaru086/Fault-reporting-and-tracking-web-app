@@ -10,15 +10,21 @@ const LIBELLES_ROLE = {
     RESPONSABLE: "Responsable technique"
 };
 
-/** Appelle l'API. En cas d'erreur, lève {statut, message, erreurs}. */
+/** Appelle l'API. En cas d'erreur, lève {statut, message, erreurs}.
+ *  options.corps : objet envoyé en JSON ; options.formulaire : FormData (envoi de fichier). */
 async function api(url, options = {}) {
     const config = {
         method: options.method || "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: {},
         credentials: "same-origin"
     };
-    if (options.corps !== undefined) {
-        config.body = JSON.stringify(options.corps);
+    if (options.formulaire) {
+        config.body = options.formulaire;   // le navigateur fixe lui-même le type multipart
+    } else {
+        config.headers["Content-Type"] = "application/json";
+        if (options.corps !== undefined) {
+            config.body = JSON.stringify(options.corps);
+        }
     }
 
     const reponse = await fetch(url, config);
@@ -45,6 +51,15 @@ function echapper(texte) {
     return div.innerHTML;
 }
 
+/** "Maria Ionescu" devient "MI" : affiché quand l'utilisateur n'a pas de photo. */
+function initiales(nomComplet) {
+    const mots = String(nomComplet || "").trim().split(/\s+/).filter(Boolean);
+    if (mots.length === 0) return "?";
+    const premiere = mots[0][0];
+    const derniere = mots.length > 1 ? mots[mots.length - 1][0] : "";
+    return (premiere + derniere).toUpperCase();
+}
+
 /** Vérifie la connexion ; sinon on va sur la page de connexion. */
 async function exigerConnexion() {
     try {
@@ -56,12 +71,14 @@ async function exigerConnexion() {
 }
 
 /** Dessine la barre du haut et le menu autour du contenu de la page. */
+/** Dessine la barre du haut et le menu autour du contenu de la page. */
 function afficherMiseEnPage(utilisateur, pageActive) {
     const liens = [
         { id: "accueil", texte: "Accueil", url: "index.html" },
         { id: "signaler", texte: "Signaler une panne", url: "signaler.html" },
         { id: "liste", texte: "Liste des pannes", url: "liste.html" },
-        { id: "mes-pannes", texte: "Mes pannes", url: "mes-pannes.html" }
+        { id: "mes-pannes", texte: "Mes pannes", url: "mes-pannes.html" },
+        { id: "profil", texte: "Mon profil", url: "profil.html" }
     ];
 
     const menu = liens.map(l =>
@@ -71,11 +88,16 @@ function afficherMiseEnPage(utilisateur, pageActive) {
     const contenu = document.getElementById("contenu").innerHTML;
     const role = LIBELLES_ROLE[utilisateur.role] || utilisateur.role;
 
+    const avatar = utilisateur.photoUrl
+        ? `<img class="avatar-petit" src="${echapper(utilisateur.photoUrl)}" alt="">`
+        : `<span class="avatar-petit">${echapper(initiales(utilisateur.nomComplet))}</span>`;
+
     document.body.innerHTML = `
         <header class="barre-haut">
             <span class="nom"><span class="marque"></span>Gestion des <em>pannes</em></span>
             <span class="compte">
-                ${echapper(utilisateur.nomComplet)} <span class="role">· ${echapper(role)}</span>
+                <a href="profil.html">${avatar}${echapper(utilisateur.nomComplet)}</a>
+                <span class="role">· ${echapper(role)}</span>
                 <button id="bouton-deconnexion">Déconnexion</button>
             </span>
         </header>
@@ -129,6 +151,11 @@ function formaterDateHeure(iso) {
     return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
 }
 /** Le tableau HTML d'une liste de pannes (utilisé par "Mes pannes"). */
+/** "Noul Local (campus principal)" devient "Noul Local" : version courte pour les tableaux. */
+function campusCourt(nom) {
+    return nom ? nom.replace(/\s*\(.*?\)/, "") : "";
+}
+
 function tableauPannes(pannes, messageVide) {
     if (pannes.length === 0) {
         return `<p class="vide">${echapper(messageVide || "Aucune panne.")}</p>`;
@@ -137,7 +164,7 @@ function tableauPannes(pannes, messageVide) {
         <tr>
             <td>${p.id}</td>
             <td><a href="detail.html?id=${p.id}">${echapper(p.titre)}</a></td>
-            <td>${echapper(p.lieu)}</td>
+            <td>${p.unite ? `<strong>${echapper(p.unite)}</strong><br>` : ""}${p.campus ? echapper(campusCourt(p.campus)) + " · " : ""}${echapper(p.lieu)}</td>
             <td>${echapper(p.categorieLibelle)}</td>
             <td class="${p.priorite === "HAUTE" ? "priorite-haute" : ""}">${echapper(p.prioriteLibelle)}</td>
             <td><span class="statut ${classeStatut(p.statut)}">${echapper(p.statutLibelle)}</span></td>

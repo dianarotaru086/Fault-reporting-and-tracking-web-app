@@ -49,6 +49,11 @@ public class Panne {
     @JoinColumn(name = "responsable_id")
     private Utilisateur responsable;
 
+    /** La faculté ou le service concerné : le campus s'en déduit. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unite_id")
+    private Unite unite;
+
     /**
      * Verrouillage optimiste : si deux responsables valident la prise en charge
      * exactement au même moment, le second échoue au lieu d'écraser le premier.
@@ -104,4 +109,7 @@ public class Panne {
     public void setResponsable(Utilisateur responsable) { this.responsable = responsable; }
 
     public Long getVersion() { return version; }
+
+    public Unite getUnite() { return unite; }
+    public void setUnite(Unite unite) { this.unite = unite; }
 }

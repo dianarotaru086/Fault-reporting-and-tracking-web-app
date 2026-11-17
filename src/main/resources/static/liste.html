@@ -7,129 +7,149 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="contenu">
-        <h1>Liste des pannes</h1>
+<div id="contenu">
+    <h1>Liste des pannes</h1>
 
-        <form id="filtres" class="filtres" novalidate>
-            <div>
-                <label for="q">Rechercher</label>
-                <input type="search" id="q" placeholder="Titre, lieu, catégorie…" autocomplete="off">
-            </div>
-            <div>
-                <label for="categorie">Catégorie</label>
-                <select id="categorie"></select>
-            </div>
-            <div>
-                <label for="statut">Statut</label>
-                <select id="statut"></select>
-            </div>
-            <div>
-                <label for="priorite">Priorité</label>
-                <select id="priorite"></select>
-            </div>
-            <div class="boutons">
-                <button type="submit">Filtrer</button>
-                <button type="button" class="secondaire" id="reinitialiser">Réinitialiser</button>
-            </div>
-        </form>
+    <form id="filtres" class="filtres" novalidate>
+        <div class="large">
+            <label for="q">Rechercher</label>
+            <input type="search" id="q" placeholder="Titre, lieu, catégorie…" autocomplete="off">
+        </div>
+        <div>
+            <label for="campusId">Campus</label>
+            <select id="campusId"></select>
+        </div>
+        <div>
+            <label for="uniteId">Faculté / service</label>
+            <select id="uniteId"></select>
+        </div>
+        <div>
+            <label for="categorie">Catégorie</label>
+            <select id="categorie"></select>
+        </div>
+        <div>
+            <label for="statut">Statut</label>
+            <select id="statut"></select>
+        </div>
+        <div>
+            <label for="priorite">Priorité</label>
+            <select id="priorite"></select>
+        </div>
+        <div class="boutons">
+            <button type="submit">Filtrer</button>
+            <button type="button" class="secondaire" id="reinitialiser">Réinitialiser</button>
+        </div>
+    </form>
 
-        <div id="alerte" class="alerte" hidden></div>
-        <p class="resultat" id="resultat"></p>
-        <div class="tableau" id="tableau"></div>
-    </div>
+    <div id="alerte" class="alerte" hidden></div>
+    <p class="resultat" id="resultat"></p>
+    <div class="tableau" id="tableau"></div>
+</div>
 
-    <script src="js/app.js"></script>
-    <script>
-        (async () => {
-            const utilisateur = await exigerConnexion();
-            if (!utilisateur) return;
+<script src="js/app.js"></script>
+<script>
+    (async () => {
+        const utilisateur = await exigerConnexion();
+        if (!utilisateur) return;
 
-            // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
-            afficherMiseEnPage(utilisateur, "liste");
+        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
+        afficherMiseEnPage(utilisateur, "liste");
 
-            const formulaire = document.getElementById("filtres");
-            const alerte = document.getElementById("alerte");
+        const formulaire = document.getElementById("filtres");
+        const alerte = document.getElementById("alerte");
+        const selectCampus = document.getElementById("campusId");
+        const selectUnite = document.getElementById("uniteId");
+        let structure = [];
 
-            function remplir(select, premier, options) {
-                select.innerHTML = `<option value="">${premier}</option>` +
-                    options.map(o => `<option value="${echapper(o.code)}">${echapper(o.libelle)}</option>`).join("");
+        function remplir(select, premier, options) {
+            select.innerHTML = `<option value="">${premier}</option>` +
+                options.map(o => `<option value="${echapper(o.code)}">${echapper(o.libelle)}</option>`).join("");
+        }
+
+        function remplirCampus() {
+            selectCampus.length = 0;
+            selectCampus.add(new Option("Tous", ""));
+            structure.forEach(c => selectCampus.add(new Option(campusCourt(c.nom), c.id)));
+        }
+
+        // Sans campus choisi : toutes les facultés, rangées par campus.
+        // Avec un campus : seulement les siennes.
+        function remplirUnites() {
+            const campusChoisi = selectCampus.value;
+            const precedent = selectUnite.value;
+
+            selectUnite.length = 0;
+            selectUnite.add(new Option("Toutes", ""));
+            structure
+                .filter(c => !campusChoisi || String(c.id) === campusChoisi)
+                .forEach(c => {
+                    const groupe = document.createElement("optgroup");
+                    groupe.label = campusCourt(c.nom);
+                    c.unites.forEach(u => groupe.appendChild(new Option(u.nom, u.id)));
+                    selectUnite.appendChild(groupe);
+                });
+
+            const existe = Array.from(selectUnite.options).some(o => o.value === precedent);
+            selectUnite.value = existe ? precedent : "";
+        }
+
+        // Construit l'adresse avec uniquement les critères remplis
+        function adresse() {
+            const params = new URLSearchParams();
+            for (const id of ["q", "campusId", "uniteId", "categorie", "statut", "priorite"]) {
+                const valeur = document.getElementById(id).value.trim();
+                if (valeur) params.set(id, valeur);
             }
+            const texte = params.toString();
+            return "/api/pannes" + (texte ? "?" + texte : "");
+        }
 
-            // Construit l'adresse avec uniquement les critères remplis
-            function adresse() {
-                const params = new URLSearchParams();
-                for (const id of ["q", "categorie", "statut", "priorite"]) {
-                    const valeur = document.getElementById(id).value.trim();
-                    if (valeur) params.set(id, valeur);
-                }
-                const texte = params.toString();
-                return "/api/pannes" + (texte ? "?" + texte : "");
-            }
+        function afficher(pannes) {
+            const nombre = pannes.length;
+            document.getElementById("resultat").textContent =
+                nombre === 0 ? "" : nombre + (nombre === 1 ? " panne" : " pannes");
+            document.getElementById("tableau").innerHTML =
+                tableauPannes(pannes, "Aucune panne ne correspond à ces critères.");
+        }
 
-            function afficher(pannes) {
-                const nombre = pannes.length;
-                document.getElementById("resultat").textContent =
-                    nombre === 0 ? "" : nombre + (nombre === 1 ? " panne" : " pannes");
-
-                if (nombre === 0) {
-                    document.getElementById("tableau").innerHTML =
-                        '<p class="vide">Aucune panne ne correspond à ces critères.</p>';
-                    return;
-                }
-
-                const lignes = pannes.map(p => `
-                    <tr>
-                        <td>${p.id}</td>
-                        <td><a href="detail.html?id=${p.id}">${echapper(p.titre)}</a></td>
-                        <td>${echapper(p.lieu)}</td>
-                        <td>${echapper(p.categorieLibelle)}</td>
-                        <td class="${p.priorite === "HAUTE" ? "priorite-haute" : ""}">${echapper(p.prioriteLibelle)}</td>
-                        <td><span class="statut ${classeStatut(p.statut)}">${echapper(p.statutLibelle)}</span></td>
-                        <td>${formaterDate(p.dateSignalement)}</td>
-                    </tr>`).join("");
-
-                document.getElementById("tableau").innerHTML = `
-                    <table>
-                        <thead>
-                            <tr><th>ID</th><th>Titre</th><th>Lieu</th><th>Catégorie</th>
-                                <th>Priorité</th><th>Statut</th><th>Date</th></tr>
-                        </thead>
-                        <tbody>${lignes}</tbody>
-                    </table>`;
-            }
-
-            async function charger() {
-                alerte.hidden = true;
-                try {
-                    afficher(await api(adresse()));
-                } catch (e) {
-                    alerte.textContent = e.message;
-                    alerte.hidden = false;
-                }
-            }
-
-            // Menus déroulants, puis première liste
+        async function charger() {
+            alerte.hidden = true;
             try {
-                const references = await api("/api/references");
-                remplir(document.getElementById("categorie"), "Toutes", references.categories);
-                remplir(document.getElementById("statut"), "Tous", references.statuts);
-                remplir(document.getElementById("priorite"), "Toutes", references.priorites);
+                afficher(await api(adresse()));
             } catch (e) {
                 alerte.textContent = e.message;
                 alerte.hidden = false;
             }
+        }
 
-            formulaire.addEventListener("submit", (evenement) => {
-                evenement.preventDefault();
-                charger();
-            });
-            document.getElementById("reinitialiser").addEventListener("click", () => {
-                formulaire.reset();
-                charger();
-            });
+        // Menus déroulants, puis première liste
+        try {
+            const [references, campusEtUnites] = await Promise.all([
+                api("/api/references"), api("/api/structure")]);
+            structure = campusEtUnites;
+            remplir(document.getElementById("categorie"), "Toutes", references.categories);
+            remplir(document.getElementById("statut"), "Tous", references.statuts);
+            remplir(document.getElementById("priorite"), "Toutes", references.priorites);
+            remplirCampus();
+            remplirUnites();
+        } catch (e) {
+            alerte.textContent = e.message;
+            alerte.hidden = false;
+        }
 
+        selectCampus.addEventListener("change", remplirUnites);
+        formulaire.addEventListener("submit", (evenement) => {
+            evenement.preventDefault();
             charger();
-        })();
-    </script>
+        });
+        document.getElementById("reinitialiser").addEventListener("click", () => {
+            formulaire.reset();
+            remplirUnites();
+            charger();
+        });
+
+        charger();
+    })();
+</script>
 </body>
 </html>

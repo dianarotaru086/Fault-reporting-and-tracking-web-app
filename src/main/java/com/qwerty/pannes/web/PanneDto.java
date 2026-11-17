@@ -19,10 +19,17 @@ public record PanneDto(
         LocalDateTime dateSignalement,
         LocalDateTime dateResolution,
         String signaleur,
-        String responsable) {
+        String responsable,
+        Long campusId,
+        String campus,
+        String campusAdresse,
+        Long uniteId,
+        String unite) {
 
-    /** À appeler pendant une transaction : signaleur et responsable sont chargés à la demande. */
+    /** À appeler pendant une transaction : les relations sont chargées à la demande. */
     public static PanneDto de(Panne p) {
+        Unite unite = p.getUnite();
+        Campus campus = unite == null ? null : unite.getCampus();
         return new PanneDto(
                 p.getId(), p.getTitre(), p.getDescription(), p.getLieu(),
                 p.getCategorie(), p.getCategorie().getLibelle(),
@@ -30,6 +37,11 @@ public record PanneDto(
                 p.getStatut(), p.getStatut().getLibelle(),
                 p.getDateSignalement(), p.getDateResolution(),
                 p.getSignaleur().getNomComplet(),
-                p.getResponsable() == null ? null : p.getResponsable().getNomComplet());
+                p.getResponsable() == null ? null : p.getResponsable().getNomComplet(),
+                campus == null ? null : campus.getId(),
+                campus == null ? null : campus.getNom(),
+                campus == null ? null : campus.getAdresse(),
+                unite == null ? null : unite.getId(),
+                unite == null ? null : unite.getNom());
     }
 }

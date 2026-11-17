@@ -35,19 +35,21 @@ public class PanneController {
 
     /**
      * La liste des pannes avec recherche et filtres, tous facultatifs :
-     * /api/pannes?q=projecteur&categorie=ELECTRICITE&statut=NEW&priorite=HAUTE
+     * /api/pannes?q=projecteur&campusId=1&uniteId=3&categorie=ELECTRICITE&statut=NEW&priorite=HAUTE
      */
     @GetMapping("/pannes")
     public List<PanneDto> lister(@RequestParam(required = false) String q,
+                                 @RequestParam(required = false) Long campusId,
+                                 @RequestParam(required = false) Long uniteId,
                                  @RequestParam(required = false) Categorie categorie,
                                  @RequestParam(required = false) Statut statut,
                                  @RequestParam(required = false) Priorite priorite,
                                  HttpSession session) {
         Connexion.exiger(session);
-        return service.lister(q, categorie, statut, priorite);
+        return service.lister(q, campusId, uniteId, categorie, statut, priorite);
     }
 
-    /** Les listes de choix (catégories, priorités) pour remplir les menus déroulants. */
+    /** Les listes de choix (catégories, priorités, statuts) pour remplir les menus déroulants. */
     @GetMapping("/references")
     public Map<String, List<Option>> references(HttpSession session) {
         Connexion.exiger(session);
@@ -59,25 +61,27 @@ public class PanneController {
                 "statuts", Arrays.stream(Statut.values())
                         .map(s -> new Option(s.name(), s.getLibelle())).toList());
     }
+
     /** Le détail d'une panne, avec l'historique et les droits de l'utilisateur. */
     @GetMapping("/pannes/{id}")
     public PanneDetailDto detail(@PathVariable Long id, HttpSession session) {
         return service.detail(id, Connexion.exiger(session));
     }
 
-    /** Prendre une panne en charge (règle : refusé si elle n'est plus New). */
+    /** Prendre une panne en charge (refusé si autre campus, ou si elle n'est plus New). */
     @PostMapping("/pannes/{id}/prise-en-charge")
     public PanneDetailDto prendreEnCharge(@PathVariable Long id, HttpSession session) {
         return service.prendreEnCharge(id, Connexion.exiger(session));
     }
 
-    /** Marquer une panne comme résolue (avec un commentaire facultatif). */
+    /** Marquer une panne comme résolue (avec un commentaire obligatoire). */
     @PostMapping("/pannes/{id}/resolution")
     public PanneDetailDto resoudre(@PathVariable Long id,
                                    @Valid @RequestBody ResolutionRequest demande,
                                    HttpSession session) {
         return service.resoudre(id, Connexion.exiger(session), demande);
     }
+
     /** Mes pannes : celles que j'ai signalées (et, si je suis responsable, celles que je traite). */
     @GetMapping("/pannes/mes-pannes")
     public MesPannesDto mesPannes(HttpSession session) {

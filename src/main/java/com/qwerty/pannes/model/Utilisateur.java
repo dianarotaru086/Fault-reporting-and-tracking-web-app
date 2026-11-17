@@ -32,6 +32,19 @@ public class Utilisateur {
     @Column(name = "date_inscription", nullable = false)
     private LocalDateTime dateInscription;
 
+    @Column(length = 20)
+    private String telephone;
+
+    /** Le campus de rattachement (pour un responsable : celui dont il s'occupe). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "campus_id")
+    private Campus campus;
+
+    /** La faculté ou le service de l'utilisateur (vide pour un responsable). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unite_id")
+    private Unite unite;
+
     protected Utilisateur() {
         // requis par JPA
     }
@@ -67,4 +80,12 @@ public class Utilisateur {
     public void setRole(Role role) { this.role = role; }
 
     public LocalDateTime getDateInscription() { return dateInscription; }
+    public String getTelephone() { return telephone; }
+    public void setTelephone(String telephone) { this.telephone = telephone; }
+
+    public Campus getCampus() { return campus; }
+    public void setCampus(Campus campus) { this.campus = campus; }
+
+    public Unite getUnite() { return unite; }
+    public void setUnite(Unite unite) { this.unite = unite; }
 }

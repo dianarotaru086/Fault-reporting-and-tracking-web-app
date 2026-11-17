@@ -36,10 +36,8 @@
         function zoneActions(d) {
             let html = "";
 
-            if (d.peutPrendreEnCharge) {
-                html += `<div class="zone-action">
-                                <button type="button" id="bouton-prise">Prendre en charge</button>
-                            </div>`;
+            if (d.avertissement) {
+                html += `<div class="zone-action"><p>${echapper(d.avertissement)}</p></div>`;
             }
 
             if (d.peutResoudre) {
@@ -88,7 +86,10 @@
                         <dt>Priorité</dt>
                         <dd class="${p.priorite === "HAUTE" ? "priorite-haute" : ""}">${echapper(p.prioriteLibelle)}</dd>
                         <dt>Catégorie</dt><dd>${echapper(p.categorieLibelle)}</dd>
-                        <dt>Lieu</dt><dd>${echapper(p.lieu)}</dd>
+                                                <dt>Campus</dt>
+                        <dd>${p.campus ? echapper(p.campus) + "<br>" + echapper(p.campusAdresse) : "Non renseigné"}</dd>
+                        <dt>Faculté / service</dt><dd>${p.unite ? echapper(p.unite) : "Non renseigné"}</dd>
+                        <dt>Salle / lieu</dt><dd>${echapper(p.lieu)}</dd>
                         <dt>Signalée par</dt>
                         <dd>${echapper(p.signaleur)}, le ${formaterDateHeure(p.dateSignalement)}</dd>
                         ${p.responsable ? `<dt>Responsable</dt><dd>${echapper(p.responsable)}</dd>` : ""}

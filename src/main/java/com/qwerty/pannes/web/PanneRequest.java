@@ -19,6 +19,9 @@ public record PanneRequest(
         @Size(min = 10, max = 1000, message = "La description doit contenir entre 10 et 1000 caractères.")
         String description,
 
+        @NotNull(message = "Choisissez la faculté ou le service concerné.")
+        Long uniteId,
+
         @NotBlank(message = "Le lieu est obligatoire.")
         @Size(max = 50, message = "Le lieu ne peut pas dépasser 50 caractères.")
         String lieu,

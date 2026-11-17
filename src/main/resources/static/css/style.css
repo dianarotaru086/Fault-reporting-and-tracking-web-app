@@ -240,13 +240,14 @@ tbody tr:hover { background: #faf6ee; }
 /* ---------- liste des pannes ---------- */
 .filtres {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    grid-template-columns: repeat(4, 1fr);
     gap: 14px;
     align-items: end;
     margin: 22px 0 18px;
 }
 .filtres label { margin: 0 0 4px; }
 .filtres .boutons { margin: 0; }
+.filtres .large { grid-column: span 2; }
 .resultat { margin: 0 0 10px; font-weight: 600; }
 .tableau { overflow-x: auto; }
 .tableau a { font-weight: 600; }
@@ -308,3 +309,42 @@ tbody tr:hover { background: #faf6ee; }
 
 button.danger, .danger { background: var(--erreur); border-color: #7d1c21; color: #fff; }
 button.danger:hover, .danger:hover { background: #7d1c21; }
+/* ---------- avatar et profil ---------- */
+.avatar-petit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-right: 9px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    background: #d2c7ae;
+    color: var(--encre);
+    font-size: 13px;
+    font-weight: 600;
+}
+.barre-haut .compte a { color: inherit; text-decoration: none; }
+.barre-haut .compte a:hover { text-decoration: underline; }
+
+.profil { display: flex; gap: 44px; align-items: flex-start; flex-wrap: wrap; margin-top: 22px; }
+.profil-photo { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.profil-corps { flex: 1; min-width: 300px; max-width: 520px; }
+.profil-corps .infos { margin-top: 0; }
+.profil-corps #vue > button { margin-top: 18px; }
+.profil-mdp { margin-top: 34px; }
+
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 132px;
+    height: 132px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--papier-fonce);
+    border: 1px solid var(--trait);
+    font-family: var(--titres);
+    font-size: 46px;
+}

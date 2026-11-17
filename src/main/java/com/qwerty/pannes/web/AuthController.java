@@ -3,6 +3,7 @@ package com.qwerty.pannes.web;
 import com.qwerty.pannes.model.Role;
 import com.qwerty.pannes.model.Utilisateur;
 import com.qwerty.pannes.repository.UtilisateurRepository;
+import com.qwerty.pannes.service.ProfilService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -23,18 +24,20 @@ public class AuthController {
             @NotBlank(message = "Le mot de passe est obligatoire") String motDePasse) {}
 
     /** Ce que le serveur renvoie : jamais le mot de passe. */
-    public record UtilisateurDto(Long id, String nomComplet, String email, Role role) {
-        static UtilisateurDto de(Utilisateur u) {
-            return new UtilisateurDto(u.getId(), u.getNomComplet(), u.getEmail(), u.getRole());
+    public record UtilisateurDto(Long id, String nomComplet, String email, Role role, String photoUrl) {
+        static UtilisateurDto de(Utilisateur u, String photoUrl) {
+            return new UtilisateurDto(u.getId(), u.getNomComplet(), u.getEmail(), u.getRole(), photoUrl);
         }
     }
 
     private final UtilisateurRepository utilisateurs;
     private final PasswordEncoder encoder;
+    private final ProfilService profil;
 
-    public AuthController(UtilisateurRepository utilisateurs, PasswordEncoder encoder) {
+    public AuthController(UtilisateurRepository utilisateurs, PasswordEncoder encoder, ProfilService profil) {
         this.utilisateurs = utilisateurs;
         this.encoder = encoder;
+        this.profil = profil;
     }
 
     @PostMapping("/login")
@@ -44,7 +47,7 @@ public class AuthController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "E-mail ou mot de passe incorrect."));
         session.setAttribute(SESSION_KEY, u.getId());
-        return UtilisateurDto.de(u);
+        return UtilisateurDto.de(u, profil.photoUrl(u.getId()));
     }
 
     @PostMapping("/logout")
@@ -53,7 +56,7 @@ public class AuthController {
         session.invalidate();
     }
 
-    /** Qui est connecté ? Sert à la page pour afficher le nom et le rôle. */
+    /** Qui est connecté ? Sert à la page pour afficher le nom, le rôle et la photo. */
     @GetMapping("/me")
     public UtilisateurDto me(HttpSession session) {
         Object id = session.getAttribute(SESSION_KEY);
@@ -61,7 +64,7 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non connecté.");
         }
         return utilisateurs.findById((Long) id)
-                .map(UtilisateurDto::de)
+                .map(u -> UtilisateurDto.de(u, profil.photoUrl(u.getId())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non connecté."));
     }
 }

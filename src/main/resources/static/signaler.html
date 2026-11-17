@@ -26,8 +26,24 @@
                 <div class="message-champ"></div>
             </div>
 
+            <div class="deux-colonnes">
+                <div class="champ">
+                    <label for="campusId">Campus</label>
+                    <select id="campusId">
+                        <option value="" selected disabled>Choisir…</option>
+                    </select>
+                </div>
+                <div class="champ" data-champ="uniteId">
+                    <label for="uniteId">Faculté ou service</label>
+                    <select id="uniteId" disabled>
+                        <option value="" selected disabled>Choisissez d'abord un campus</option>
+                    </select>
+                    <div class="message-champ"></div>
+                </div>
+            </div>
+
             <div class="champ" data-champ="lieu">
-                <label for="lieu">Lieu</label>
+                <label for="lieu">Salle ou lieu précis</label>
                 <input type="text" id="lieu" autocomplete="off">
                 <div class="message-champ"></div>
             </div>
@@ -68,6 +84,9 @@
 
         const formulaire = document.getElementById("formulaire");
         const alerte = document.getElementById("alerte");
+        const selectCampus = document.getElementById("campusId");
+        const selectUnite = document.getElementById("uniteId");
+        let structure = [];
 
         function montrer(message, succes) {
             alerte.textContent = message;
@@ -88,16 +107,49 @@
                 options.map(o => `<option value="${echapper(o.code)}">${echapper(o.libelle)}</option>`).join("");
         }
 
+        // La liste des facultés dépend du campus choisi
+        function remplirUnites(campusId, uniteId) {
+            selectUnite.innerHTML = '<option value="" selected disabled>Choisir…</option>';
+            const campus = structure.find(c => String(c.id) === String(campusId));
+            if (!campus) {
+                selectUnite.options[0].textContent = "Choisissez d'abord un campus";
+                selectUnite.disabled = true;
+                return;
+            }
+            campus.unites.forEach(u => selectUnite.add(new Option(u.nom, u.id)));
+            selectUnite.disabled = false;
+            if (uniteId) selectUnite.value = uniteId;
+        }
+
+        selectCampus.addEventListener("change", () => remplirUnites(selectCampus.value, null));
+
+        // Pour une nouvelle panne : on propose d'abord le campus et la faculté du profil
+        async function preselection() {
+            try {
+                const profil = await api("/api/profil");
+                const campus = structure.find(c => c.nom === profil.campus);
+                if (!campus) return;
+                selectCampus.value = campus.id;
+                const unite = campus.unites.find(u => u.nom === profil.unite);
+                remplirUnites(campus.id, unite ? unite.id : null);
+            } catch (e) {
+                // pas grave : le formulaire reste simplement vide
+            }
+        }
+
         try {
-            const references = await api("/api/references");
+            const [references, campusEtUnites] = await Promise.all([
+                api("/api/references"), api("/api/structure")]);
+            structure = campusEtUnites;
             remplir(document.getElementById("categorie"), references.categories);
             remplir(document.getElementById("priorite"), references.priorites);
+            structure.forEach(c => selectCampus.add(new Option(c.nom, c.id)));
         } catch (e) {
             montrer(e.message, false);
         }
 
-        // En modification : on vérifie le droit, puis on pré-remplit le formulaire
         if (edition) {
+            // En modification : on vérifie le droit, puis on pré-remplit le formulaire
             try {
                 const detail = await api("/api/pannes/" + encodeURIComponent(id));
                 if (!detail.peutModifier) {
@@ -111,11 +163,17 @@
                 document.getElementById("lieu").value = p.lieu;
                 document.getElementById("categorie").value = p.categorie;
                 document.getElementById("priorite").value = p.priorite;
+                if (p.campusId) {
+                    selectCampus.value = p.campusId;
+                    remplirUnites(p.campusId, p.uniteId);
+                }
             } catch (e) {
                 formulaire.hidden = true;
                 montrer(e.message, false);
                 return;
             }
+        } else {
+            await preselection();
         }
 
         formulaire.addEventListener("submit", async (evenement) => {
@@ -126,6 +184,7 @@
             const corps = {
                 titre: document.getElementById("titre").value,
                 description: document.getElementById("description").value,
+                uniteId: selectUnite.value ? Number(selectUnite.value) : null,
                 lieu: document.getElementById("lieu").value,
                 categorie: document.getElementById("categorie").value || null,
                 priorite: document.getElementById("priorite").value || null
@@ -139,6 +198,7 @@
                 }
                 const panne = await api("/api/pannes", { method: "POST", corps });
                 formulaire.reset();
+                await preselection();
                 montrer(`La panne n° ${panne.id} a été enregistrée (statut : ${panne.statutLibelle}).`, true);
             } catch (e) {
                 const trouves = afficherErreursChamps(formulaire, e.erreurs);
