@@ -34,13 +34,16 @@
         }
 
         function zoneActions(d) {
+            let html = "";
+
             if (d.peutPrendreEnCharge) {
-                return `<div class="zone-action">
+                html += `<div class="zone-action">
                                 <button type="button" id="bouton-prise">Prendre en charge</button>
                             </div>`;
             }
+
             if (d.peutResoudre) {
-                return `<div class="zone-action">
+                html += `<div class="zone-action">
                                 <label for="commentaire">Qu'avez-vous fait pour résoudre cette panne ?</label>
                                 <textarea id="commentaire"></textarea>
                                 <button type="button" id="bouton-resolution">Marquer comme résolue</button>
@@ -51,7 +54,21 @@
                                 </div>
                             </div>`;
             }
-            return "";
+
+            if (d.peutModifier) {
+                html += `<div class="zone-action">
+                                <div class="rangee">
+                                    <a class="bouton secondaire" href="signaler.html?id=${d.panne.id}">Modifier</a>
+                                    <button type="button" class="danger" id="bouton-suppression">Supprimer</button>
+                                </div>
+                                <div id="confirmation-suppression" class="confirmation" hidden>
+                                    <p>Supprimer définitivement cette panne et son historique ?</p>
+                                    <button type="button" class="danger" id="bouton-confirmer-suppression">Oui, supprimer</button>
+                                    <button type="button" class="secondaire" id="bouton-annuler-suppression">Annuler</button>
+                                </div>
+                            </div>`;
+            }
+            return html;
         }
 
         function afficher(d) {
@@ -86,16 +103,11 @@
                     <h2>Historique des interventions</h2>
                     <ol class="historique">${historique}</ol>`;
 
+            // --- prise en charge ---
             document.getElementById("bouton-prise")?.addEventListener("click", () =>
                 agir(`/api/pannes/${id}/prise-en-charge`, null, "La panne est maintenant prise en charge par vous."));
 
-            document.getElementById("bouton-resolution")?.addEventListener("click", () =>
-                agir(`/api/pannes/${id}/resolution`,
-                    { commentaire: document.getElementById("commentaire").value },
-                    "La panne est marquée comme résolue."));
-            document.getElementById("bouton-prise")?.addEventListener("click", () =>
-                agir(`/api/pannes/${id}/prise-en-charge`, null, "La panne est maintenant prise en charge par vous."));
-
+            // --- résolution, avec confirmation ---
             const boutonResolution = document.getElementById("bouton-resolution");
             if (boutonResolution) {
                 const confirmation = document.getElementById("confirmation");
@@ -110,18 +122,31 @@
                         "La panne est marquée comme résolue.",
                         fermer));
             }
+
+            // --- suppression, avec confirmation ---
+            const boutonSuppression = document.getElementById("bouton-suppression");
+            if (boutonSuppression) {
+                const confirmation = document.getElementById("confirmation-suppression");
+                boutonSuppression.addEventListener("click", () => { confirmation.hidden = false; });
+                document.getElementById("bouton-annuler-suppression").addEventListener("click", () => {
+                    confirmation.hidden = true;
+                });
+                document.getElementById("bouton-confirmer-suppression").addEventListener("click", supprimer);
+            }
         }
 
         async function charger() {
             try {
                 afficher(await api("/api/pannes/" + encodeURIComponent(id)));
             } catch (e) {
+                fiche.innerHTML = "";
                 montrer(e.message, false);
             }
         }
 
-        // Envoie une action ; en cas de refus (409, 403...), affiche le message
-        // du serveur puis recharge la page pour montrer l'état réel de la panne.
+        // Envoie une action ; en cas de refus, affiche le message du serveur.
+        // Erreur 400 (champ invalide) : on garde le texte tapé et on referme la confirmation.
+        // Autre refus (409, 403...) : on recharge pour montrer l'état réel de la panne.
         async function agir(url, corps, messageSucces, apresRefusDeSaisie) {
             alerte.hidden = true;
             try {
@@ -135,6 +160,17 @@
                 } else {
                     await charger();
                 }
+            }
+        }
+
+        async function supprimer() {
+            alerte.hidden = true;
+            try {
+                await api("/api/pannes/" + encodeURIComponent(id), { method: "DELETE" });
+                window.location.href = "liste.html";
+            } catch (e) {
+                montrer(e.message, false);
+                await charger();
             }
         }
 

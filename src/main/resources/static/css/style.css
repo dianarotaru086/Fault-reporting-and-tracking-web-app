@@ -301,3 +301,10 @@ tbody tr:hover { background: #faf6ee; }
 }
 .confirmation p { margin: 0 0 12px; font-weight: 600; }
 .confirmation button { margin: 0 10px 0 0; }
+
+/* ---------- boutons en rangée, bouton de suppression ---------- */
+.rangee { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
+.rangee button, .rangee .bouton { margin: 0; }
+
+button.danger, .danger { background: var(--erreur); border-color: #7d1c21; color: #fff; }
+button.danger:hover, .danger:hover { background: #7d1c21; }

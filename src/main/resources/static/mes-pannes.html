@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mes pannes - Gestion des pannes</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="contenu">
+    <h1>Mes pannes</h1>
+    <div id="alerte" class="alerte" hidden></div>
+
+    <h2>Pannes que j'ai signalées</h2>
+    <div class="tableau" id="signalees"></div>
+
+    <div id="bloc-prises" hidden>
+        <h2>Pannes que j'ai prises en charge</h2>
+        <div class="tableau" id="prises"></div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+    (async () => {
+        const utilisateur = await exigerConnexion();
+        if (!utilisateur) return;
+
+        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
+        afficherMiseEnPage(utilisateur, "mes-pannes");
+
+        try {
+            const donnees = await api("/api/pannes/mes-pannes");
+
+            document.getElementById("signalees").innerHTML =
+                tableauPannes(donnees.signalees, "Vous n'avez signalé aucune panne.");
+
+            if (utilisateur.role === "RESPONSABLE") {
+                document.getElementById("bloc-prises").hidden = false;
+                document.getElementById("prises").innerHTML =
+                    tableauPannes(donnees.priseEnCharge, "Vous n'avez pris aucune panne en charge.");
+            }
+        } catch (e) {
+            const alerte = document.getElementById("alerte");
+            alerte.textContent = e.message;
+            alerte.hidden = false;
+        }
+    })();
+</script>
+</body>
+</html>

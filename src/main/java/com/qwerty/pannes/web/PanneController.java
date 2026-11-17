@@ -78,4 +78,24 @@ public class PanneController {
                                    HttpSession session) {
         return service.resoudre(id, Connexion.exiger(session), demande);
     }
+    /** Mes pannes : celles que j'ai signalées (et, si je suis responsable, celles que je traite). */
+    @GetMapping("/pannes/mes-pannes")
+    public MesPannesDto mesPannes(HttpSession session) {
+        return service.mesPannes(Connexion.exiger(session));
+    }
+
+    /** Modifier une panne (même validation que le signalement). */
+    @PutMapping("/pannes/{id}")
+    public PanneDto modifier(@PathVariable Long id,
+                             @Valid @RequestBody PanneRequest demande,
+                             HttpSession session) {
+        return service.modifier(id, demande, Connexion.exiger(session));
+    }
+
+    /** Supprimer une panne. */
+    @DeleteMapping("/pannes/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void supprimer(@PathVariable Long id, HttpSession session) {
+        service.supprimer(id, Connexion.exiger(session));
+    }
 }

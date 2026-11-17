@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.qwerty.pannes.web.MesPannesDto;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
@@ -65,21 +66,6 @@ public class PanneService {
         return PanneDto.de(panne);
     }
 
-    // ------------------------------------------------------------------
-    // Liste, recherche et filtres
-    // ------------------------------------------------------------------
-
-    /**
-     * Liste les pannes, de la plus récente à la plus ancienne, en combinant les critères.
-     * Un critère absent (null) est simplement ignoré. Les critères présents s'ajoutent (ET).
-     *
-     * Les filtres catégorie / statut / priorité sont appliqués par la base de données.
-     * La recherche texte est appliquée ensuite en Java : elle ignore majuscules, accents
-     * et ponctuation (« electricite » trouve « Électricité », « wifi » trouve « Wi-Fi »),
-     * quel que soit le réglage de MySQL.
-     *
-     * @param recherche texte cherché dans le titre, la description, le lieu et la catégorie
-     */
     @Transactional(readOnly = true)
     public List<PanneDto> lister(String recherche, Categorie categorie, Statut statut, Priorite priorite) {
         Specification<Panne> spec = (root, query, cb) -> cb.conjunction();
@@ -103,20 +89,11 @@ public class PanneService {
                 .toList();
     }
 
-    // ------------------------------------------------------------------
-    // Détail, prise en charge, résolution
-    // ------------------------------------------------------------------
-
-    /** Le détail d'une panne, avec son historique et les droits de l'utilisateur connecté. */
     @Transactional(readOnly = true)
     public PanneDetailDto detail(Long panneId, Long utilisateurId) {
         return construireDetail(trouver(panneId), connecte(utilisateurId));
     }
 
-    /**
-     * RÈGLE SPÉCIFIQUE : une panne ne peut être prise en charge que si elle est encore New.
-     * Si un autre responsable l'a déjà prise, la demande est refusée (409) avec son nom.
-     */
     @Transactional
     public PanneDetailDto prendreEnCharge(Long panneId, Long utilisateurId) {
         Utilisateur responsable = connecte(utilisateurId);
@@ -182,6 +159,55 @@ public class PanneService {
     }
 
     // ------------------------------------------------------------------
+    // Mes pannes, modification, suppression
+    // ------------------------------------------------------------------
+
+    /** Les pannes signalées par l'utilisateur et, s'il est responsable, celles qu'il a prises en charge. */
+    @Transactional(readOnly = true)
+    public MesPannesDto mesPannes(Long utilisateurId) {
+        Utilisateur utilisateur = connecte(utilisateurId);
+
+        List<PanneDto> signalees = pannes.findBySignaleurIdOrderByDateSignalementDesc(utilisateur.getId())
+                .stream().map(PanneDto::de).toList();
+
+        List<PanneDto> priseEnCharge = utilisateur.getRole() == Role.RESPONSABLE
+                ? pannes.findByResponsableIdOrderByDateSignalementDesc(utilisateur.getId())
+                .stream().map(PanneDto::de).toList()
+                : List.of();
+
+        return new MesPannesDto(signalees, priseEnCharge);
+    }
+
+    /** Modifier une panne : uniquement par celui qui l'a signalée, et tant qu'elle est New. */
+    @Transactional
+    public PanneDto modifier(Long panneId, PanneRequest demande, Long utilisateurId) {
+        Utilisateur utilisateur = connecte(utilisateurId);
+        Panne panne = trouverModifiable(panneId, utilisateur);
+
+        panne.setTitre(demande.titre().trim());
+        panne.setDescription(demande.description().trim());
+        panne.setLieu(demande.lieu().trim());
+        panne.setCategorie(demande.categorie());
+        panne.setPriorite(demande.priorite());
+        pannes.saveAndFlush(panne);
+
+        interventions.save(new Intervention(panne, utilisateur, TypeAction.MODIFICATION,
+                null, LocalDateTime.now()));
+
+        return PanneDto.de(panne);
+    }
+
+    /** Supprimer une panne (avec son historique) : mêmes règles que la modification. */
+    @Transactional
+    public void supprimer(Long panneId, Long utilisateurId) {
+        Utilisateur utilisateur = connecte(utilisateurId);
+        Panne panne = trouverModifiable(panneId, utilisateur);
+
+        interventions.deleteByPanneId(panne.getId());
+        pannes.delete(panne);
+    }
+
+    // ------------------------------------------------------------------
     // Méthodes internes
     // ------------------------------------------------------------------
 
@@ -193,6 +219,23 @@ public class PanneService {
     private Panne trouver(Long id) {
         return pannes.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Panne introuvable."));
+    }
+    /**
+     * RÈGLE : seule la personne qui a signalé la panne peut la modifier ou la supprimer,
+     * et seulement tant que personne ne l'a prise en charge (statut New).
+     */
+    private Panne trouverModifiable(Long panneId, Utilisateur utilisateur) {
+        Panne panne = trouver(panneId);
+
+        if (!panne.getSignaleur().getId().equals(utilisateur.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Seule la personne qui a signalé cette panne peut la modifier ou la supprimer.");
+        }
+        if (panne.getStatut() != Statut.NEW) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cette panne ne peut plus être modifiée : elle est déjà prise en charge.");
+        }
+        return panne;
     }
 
     /** Assemble la panne, son historique et ce que l'utilisateur a le droit d'en faire. */

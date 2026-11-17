@@ -22,6 +22,7 @@ public record InterventionDto(
     private static String libelle(TypeAction action) {
         return switch (action) {
             case SIGNALEMENT -> "Signalement";
+            case MODIFICATION -> "Modification";
             case PRISE_EN_CHARGE -> "Prise en charge";
             case COMMENTAIRE -> "Commentaire";
             case RESOLUTION -> "Résolution";

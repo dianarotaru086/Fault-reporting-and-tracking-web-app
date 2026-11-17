@@ -128,3 +128,25 @@ function classeStatut(statut) {
 function formaterDateHeure(iso) {
     return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
 }
+/** Le tableau HTML d'une liste de pannes (utilisé par "Mes pannes"). */
+function tableauPannes(pannes, messageVide) {
+    if (pannes.length === 0) {
+        return `<p class="vide">${echapper(messageVide || "Aucune panne.")}</p>`;
+    }
+    const lignes = pannes.map(p => `
+        <tr>
+            <td>${p.id}</td>
+            <td><a href="detail.html?id=${p.id}">${echapper(p.titre)}</a></td>
+            <td>${echapper(p.lieu)}</td>
+            <td>${echapper(p.categorieLibelle)}</td>
+            <td class="${p.priorite === "HAUTE" ? "priorite-haute" : ""}">${echapper(p.prioriteLibelle)}</td>
+            <td><span class="statut ${classeStatut(p.statut)}">${echapper(p.statutLibelle)}</span></td>
+            <td>${formaterDate(p.dateSignalement)}</td>
+        </tr>`).join("");
+
+    return `<table>
+        <thead><tr><th>ID</th><th>Titre</th><th>Lieu</th><th>Catégorie</th>
+                   <th>Priorité</th><th>Statut</th><th>Date</th></tr></thead>
+        <tbody>${lignes}</tbody>
+    </table>`;
+}

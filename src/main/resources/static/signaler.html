@@ -7,110 +7,147 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="contenu">
-        <h1>Signaler une panne</h1>
+<div id="contenu">
+    <h1 id="titre-page">Signaler une panne</h1>
 
-        <div class="formulaire-page">
-            <div id="alerte" class="alerte" hidden></div>
+    <div class="formulaire-page">
+        <div id="alerte" class="alerte" hidden></div>
 
-            <form id="formulaire" novalidate>
-                <div class="champ" data-champ="titre">
-                    <label for="titre">Titre</label>
-                    <input type="text" id="titre" autocomplete="off">
+        <form id="formulaire" novalidate>
+            <div class="champ" data-champ="titre">
+                <label for="titre">Titre</label>
+                <input type="text" id="titre" autocomplete="off">
+                <div class="message-champ"></div>
+            </div>
+
+            <div class="champ" data-champ="description">
+                <label for="description">Description</label>
+                <textarea id="description"></textarea>
+                <div class="message-champ"></div>
+            </div>
+
+            <div class="champ" data-champ="lieu">
+                <label for="lieu">Lieu</label>
+                <input type="text" id="lieu" autocomplete="off">
+                <div class="message-champ"></div>
+            </div>
+
+            <div class="deux-colonnes">
+                <div class="champ" data-champ="categorie">
+                    <label for="categorie">Catégorie</label>
+                    <select id="categorie"></select>
                     <div class="message-champ"></div>
                 </div>
-
-                <div class="champ" data-champ="description">
-                    <label for="description">Description</label>
-                    <textarea id="description"></textarea>
+                <div class="champ" data-champ="priorite">
+                    <label for="priorite">Priorité</label>
+                    <select id="priorite"></select>
                     <div class="message-champ"></div>
                 </div>
+            </div>
 
-                <div class="champ" data-champ="lieu">
-                    <label for="lieu">Lieu</label>
-                    <input type="text" id="lieu" autocomplete="off">
-                    <div class="message-champ"></div>
-                </div>
-
-                <div class="deux-colonnes">
-                    <div class="champ" data-champ="categorie">
-                        <label for="categorie">Catégorie</label>
-                        <select id="categorie"></select>
-                        <div class="message-champ"></div>
-                    </div>
-                    <div class="champ" data-champ="priorite">
-                        <label for="priorite">Priorité</label>
-                        <select id="priorite"></select>
-                        <div class="message-champ"></div>
-                    </div>
-                </div>
-
-                <div class="boutons">
-                    <button type="submit">Signaler</button>
-                    <a class="bouton secondaire" href="index.html">Annuler</a>
-                </div>
-            </form>
-        </div>
+            <div class="boutons">
+                <button type="submit" id="bouton-envoi">Signaler</button>
+                <a class="bouton secondaire" id="lien-annuler" href="index.html">Annuler</a>
+            </div>
+        </form>
     </div>
+</div>
 
-    <script src="js/app.js"></script>
-    <script>
-        (async () => {
-            const utilisateur = await exigerConnexion();
-            if (!utilisateur) return;
+<script src="js/app.js"></script>
+<script>
+    (async () => {
+        const utilisateur = await exigerConnexion();
+        if (!utilisateur) return;
 
-            // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
-            afficherMiseEnPage(utilisateur, "signaler");
+        // Avec ?id=... on modifie une panne existante ; sinon on en signale une nouvelle.
+        const id = new URLSearchParams(window.location.search).get("id");
+        const edition = id !== null;
 
-            const formulaire = document.getElementById("formulaire");
-            const alerte = document.getElementById("alerte");
+        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
+        afficherMiseEnPage(utilisateur, edition ? "liste" : "signaler");
 
-            // Remplit un menu déroulant avec une option vide au début
-            function remplir(select, options) {
-                select.innerHTML = '<option value="" selected disabled>Choisir…</option>' +
-                    options.map(o => `<option value="${echapper(o.code)}">${echapper(o.libelle)}</option>`).join("");
+        const formulaire = document.getElementById("formulaire");
+        const alerte = document.getElementById("alerte");
+
+        function montrer(message, succes) {
+            alerte.textContent = message;
+            alerte.classList.toggle("succes", !!succes);
+            alerte.hidden = false;
+            window.scrollTo(0, 0);
+        }
+
+        if (edition) {
+            document.getElementById("titre-page").textContent = "Modifier la panne";
+            document.getElementById("bouton-envoi").textContent = "Enregistrer";
+            document.getElementById("lien-annuler").href = "detail.html?id=" + encodeURIComponent(id);
+        }
+
+        // "Choisir…" s'affiche au début mais ne peut plus être re-choisi
+        function remplir(select, options) {
+            select.innerHTML = '<option value="" selected disabled>Choisir…</option>' +
+                options.map(o => `<option value="${echapper(o.code)}">${echapper(o.libelle)}</option>`).join("");
+        }
+
+        try {
+            const references = await api("/api/references");
+            remplir(document.getElementById("categorie"), references.categories);
+            remplir(document.getElementById("priorite"), references.priorites);
+        } catch (e) {
+            montrer(e.message, false);
+        }
+
+        // En modification : on vérifie le droit, puis on pré-remplit le formulaire
+        if (edition) {
+            try {
+                const detail = await api("/api/pannes/" + encodeURIComponent(id));
+                if (!detail.peutModifier) {
+                    formulaire.hidden = true;
+                    montrer("Cette panne ne peut plus être modifiée.", false);
+                    return;
+                }
+                const p = detail.panne;
+                document.getElementById("titre").value = p.titre;
+                document.getElementById("description").value = p.description;
+                document.getElementById("lieu").value = p.lieu;
+                document.getElementById("categorie").value = p.categorie;
+                document.getElementById("priorite").value = p.priorite;
+            } catch (e) {
+                formulaire.hidden = true;
+                montrer(e.message, false);
+                return;
             }
+        }
+
+        formulaire.addEventListener("submit", async (evenement) => {
+            evenement.preventDefault();
+            effacerErreurs(formulaire);
+            alerte.hidden = true;
+
+            const corps = {
+                titre: document.getElementById("titre").value,
+                description: document.getElementById("description").value,
+                lieu: document.getElementById("lieu").value,
+                categorie: document.getElementById("categorie").value || null,
+                priorite: document.getElementById("priorite").value || null
+            };
 
             try {
-                const references = await api("/api/references");
-                remplir(document.getElementById("categorie"), references.categories);
-                remplir(document.getElementById("priorite"), references.priorites);
-            } catch (e) {
-                alerte.textContent = e.message;
-                alerte.hidden = false;
-            }
-
-            formulaire.addEventListener("submit", async (evenement) => {
-                evenement.preventDefault();
-                effacerErreurs(formulaire);
-                alerte.hidden = true;
-                alerte.classList.remove("succes");
-
-                try {
-                    const panne = await api("/api/pannes", {
-                        method: "POST",
-                        corps: {
-                            titre: document.getElementById("titre").value,
-                            description: document.getElementById("description").value,
-                            lieu: document.getElementById("lieu").value,
-                            categorie: document.getElementById("categorie").value || null,
-                            priorite: document.getElementById("priorite").value || null
-                        }
-                    });
-                    formulaire.reset();
-                    alerte.classList.add("succes");
-                    alerte.textContent = `La panne n° ${panne.id} a été enregistrée (statut : ${panne.statutLibelle}).`;
-                    alerte.hidden = false;
-                    window.scrollTo(0, 0);
-                } catch (e) {
-                    const trouves = afficherErreursChamps(formulaire, e.erreurs);
-                    if (trouves === 0) {
-                        alerte.textContent = e.message;
-                        alerte.hidden = false;
-                    }
+                if (edition) {
+                    await api("/api/pannes/" + encodeURIComponent(id), { method: "PUT", corps });
+                    window.location.href = "detail.html?id=" + encodeURIComponent(id);
+                    return;
                 }
-            });
-        })();
-    </script>
+                const panne = await api("/api/pannes", { method: "POST", corps });
+                formulaire.reset();
+                montrer(`La panne n° ${panne.id} a été enregistrée (statut : ${panne.statutLibelle}).`, true);
+            } catch (e) {
+                const trouves = afficherErreursChamps(formulaire, e.erreurs);
+                if (trouves === 0) {
+                    montrer(e.message, false);
+                }
+            }
+        });
+    })();
+</script>
 </body>
 </html>
