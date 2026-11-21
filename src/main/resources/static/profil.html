@@ -98,7 +98,6 @@
         const utilisateur = await exigerConnexion();
         if (!utilisateur) return;
 
-        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
         afficherMiseEnPage(utilisateur, "profil");
 
         const alerte = document.getElementById("alerte");
@@ -119,7 +118,7 @@
             window.scrollTo(0, 0);
         }
 
-        // Message de réussite après un rechargement (ex. profil.html?ok=photo)
+
         const MESSAGES_OK = {
             profil: "Vos informations ont été mises à jour.",
             photo: "Votre photo a été mise à jour.",
@@ -149,7 +148,7 @@
                     <dt>Inscrit le</dt><dd>${formaterDate(p.dateInscription)}</dd>`;
         }
 
-        // La liste des facultés dépend du campus choisi
+
         function remplirUnites(campusId, uniteId) {
             selectUnite.innerHTML = '<option value="" selected disabled>Choisir…</option>';
             const campus = structure.find(c => String(c.id) === String(campusId));
@@ -164,15 +163,14 @@
         }
         selectCampus.addEventListener("change", () => remplirUnites(selectCampus.value, null));
 
-        // ---------- informations personnelles ----------
+
         document.getElementById("bouton-modifier").addEventListener("click", () => {
             document.getElementById("nom").value = profil.nom;
             document.getElementById("prenom").value = profil.prenom;
             document.getElementById("email").value = profil.email;
             document.getElementById("telephone").value = profil.telephone || "";
 
-            // Un utilisateur choisit son campus et sa faculté ; pour un responsable,
-            // le campus est attribué par l'administrateur : on ne le montre pas ici.
+
             const modifiable = profil.role === "UTILISATEUR";
             document.getElementById("zone-affectation").hidden = !modifiable;
             if (modifiable) {
@@ -214,7 +212,7 @@
             }
         });
 
-        // ---------- photo ----------
+
         document.getElementById("bouton-photo").addEventListener("click", () => fichierPhoto.click());
         fichierPhoto.addEventListener("change", async () => {
             const fichier = fichierPhoto.files[0];
@@ -232,7 +230,7 @@
             }
         });
 
-        // ---------- mot de passe ----------
+
         boutonMdp.addEventListener("click", () => {
             effacerErreurs(formMdp);
             boutonMdp.hidden = true;
@@ -262,7 +260,7 @@
             }
         });
 
-        // ---------- chargement initial ----------
+
         try {
             structure = await api("/api/structure");
             afficherProfil(await api("/api/profil"));

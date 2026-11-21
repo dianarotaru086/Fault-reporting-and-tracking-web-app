@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-/**
- * Un événement dans l'historique d'une panne : signalement, prise en charge,
- * commentaire du responsable ou résolution.
- */
 @Entity
 @Table(name = "intervention")
 public class Intervention {
@@ -20,7 +16,6 @@ public class Intervention {
     @JoinColumn(name = "panne_id", nullable = false)
     private Panne panne;
 
-    /** Qui a fait l'action (le signaleur pour SIGNALEMENT, sinon le responsable). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "auteur_id", nullable = false)
     private Utilisateur auteur;

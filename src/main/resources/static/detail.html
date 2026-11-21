@@ -19,7 +19,6 @@
         const utilisateur = await exigerConnexion();
         if (!utilisateur) return;
 
-        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
         afficherMiseEnPage(utilisateur, "liste");
 
         const id = new URLSearchParams(window.location.search).get("id");
@@ -36,8 +35,10 @@
         function zoneActions(d) {
             let html = "";
 
-            if (d.avertissement) {
-                html += `<div class="zone-action"><p>${echapper(d.avertissement)}</p></div>`;
+            if (d.peutPrendreEnCharge) {
+                html += `<div class="zone-action">
+                                <button type="button" id="bouton-prise">Prendre en charge</button>
+                            </div>`;
             }
 
             if (d.peutResoudre) {
@@ -53,17 +54,17 @@
                             </div>`;
             }
 
-            if (d.peutModifier) {
+            if (d.peutModifier || d.peutSupprimer) {
                 html += `<div class="zone-action">
                                 <div class="rangee">
-                                    <a class="bouton secondaire" href="signaler.html?id=${d.panne.id}">Modifier</a>
-                                    <button type="button" class="danger" id="bouton-suppression">Supprimer</button>
+                                    ${d.peutModifier ? `<a class="bouton secondaire" href="signaler.html?id=${d.panne.id}">Modifier</a>` : ""}
+                                    ${d.peutSupprimer ? `<button type="button" class="danger" id="bouton-suppression">Supprimer</button>` : ""}
                                 </div>
-                                <div id="confirmation-suppression" class="confirmation" hidden>
+                                ${d.peutSupprimer ? `<div id="confirmation-suppression" class="confirmation" hidden>
                                     <p>Supprimer définitivement cette panne et son historique ?</p>
                                     <button type="button" class="danger" id="bouton-confirmer-suppression">Oui, supprimer</button>
                                     <button type="button" class="secondaire" id="bouton-annuler-suppression">Annuler</button>
-                                </div>
+                                </div>` : ""}
                             </div>`;
             }
             return html;
@@ -80,13 +81,14 @@
 
             fiche.innerHTML = `
                     <h1>${echapper(p.titre)}</h1>
+                    ${d.avertissement ? `<p class="avertissement">${echapper(d.avertissement)}</p>` : ""}
                     <dl class="infos">
                         <dt>Statut</dt>
                         <dd><span class="statut ${classeStatut(p.statut)}">${echapper(p.statutLibelle)}</span></dd>
                         <dt>Priorité</dt>
                         <dd class="${p.priorite === "HAUTE" ? "priorite-haute" : ""}">${echapper(p.prioriteLibelle)}</dd>
                         <dt>Catégorie</dt><dd>${echapper(p.categorieLibelle)}</dd>
-                                                <dt>Campus</dt>
+                        <dt>Campus</dt>
                         <dd>${p.campus ? echapper(p.campus) + "<br>" + echapper(p.campusAdresse) : "Non renseigné"}</dd>
                         <dt>Faculté / service</dt><dd>${p.unite ? echapper(p.unite) : "Non renseigné"}</dd>
                         <dt>Salle / lieu</dt><dd>${echapper(p.lieu)}</dd>
@@ -104,11 +106,11 @@
                     <h2>Historique des interventions</h2>
                     <ol class="historique">${historique}</ol>`;
 
-            // --- prise en charge ---
+
             document.getElementById("bouton-prise")?.addEventListener("click", () =>
                 agir(`/api/pannes/${id}/prise-en-charge`, null, "La panne est maintenant prise en charge par vous."));
 
-            // --- résolution, avec confirmation ---
+
             const boutonResolution = document.getElementById("bouton-resolution");
             if (boutonResolution) {
                 const confirmation = document.getElementById("confirmation");
@@ -124,7 +126,6 @@
                         fermer));
             }
 
-            // --- suppression, avec confirmation ---
             const boutonSuppression = document.getElementById("bouton-suppression");
             if (boutonSuppression) {
                 const confirmation = document.getElementById("confirmation-suppression");
@@ -145,9 +146,6 @@
             }
         }
 
-        // Envoie une action ; en cas de refus, affiche le message du serveur.
-        // Erreur 400 (champ invalide) : on garde le texte tapé et on referme la confirmation.
-        // Autre refus (409, 403...) : on recharge pour montrer l'état réel de la panne.
         async function agir(url, corps, messageSucces, apresRefusDeSaisie) {
             alerte.hidden = true;
             try {

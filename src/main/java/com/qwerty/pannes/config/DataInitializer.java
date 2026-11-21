@@ -16,18 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
-/**
- * Charge des données d'exemple au premier démarrage (base vide).
- * Indispensable pour la séance de tests de la semaine 11 et pour la soutenance.
- *
- * Comptes de démonstration (mot de passe pour tous : demo123) :
- *   maria.ionescu@exemple.fr     - UTILISATEUR  (Noul Local, FILS)
- *   andrei.popescu@exemple.fr    - UTILISATEUR  (Leu, ETTI)
- *   ion.georgescu@exemple.fr     - RESPONSABLE  (campus Noul Local)
- *   elena.dumitru@exemple.fr     - RESPONSABLE  (campus Noul Local)
- *   radu.marin@exemple.fr        - RESPONSABLE  (campus Polizu)
- *   cristina.stan@exemple.fr     - RESPONSABLE  (campus Leu)
- */
 @Component
 @Order(2)
 public class DataInitializer implements CommandLineRunner {
@@ -81,10 +69,12 @@ public class DataInitializer implements CommandLineRunner {
         Utilisateur elena    = utilisateur("Dumitru", "Elena", "elena.dumitru@exemple.fr", mdp, Role.RESPONSABLE, noulLocal, null);
         Utilisateur radu     = utilisateur("Marin", "Radu", "radu.marin@exemple.fr", mdp, Role.RESPONSABLE, polizu, null);
         Utilisateur cristina = utilisateur("Stan", "Cristina", "cristina.stan@exemple.fr", mdp, Role.RESPONSABLE, leu, null);
+        utilisateur("Système", "Admin", "admin@exemple.fr", mdp, Role.ADMIN, null, null);
+        // *   admin@exemple.fr             - ADMIN
+
 
         LocalDateTime maintenant = LocalDateTime.now();
 
-        // --- Pannes au statut New (les numéros 1 à 5) ---
         nouvelle("Projecteur ne fonctionne pas", "Le projecteur de la salle du Sénat ne s'allume pas et affiche un écran noir.",
                 "Salle du Sénat, 1er étage", rectorat, Categorie.AUDIOVISUEL, Priorite.HAUTE, maria, maintenant.minusDays(1));
         nouvelle("Prise électrique hors service", "La prise murale près du bureau du professeur ne fournit plus de courant.",
@@ -96,7 +86,6 @@ public class DataInitializer implements CommandLineRunner {
         nouvelle("Écran du poste enseignant cassé", "L'écran du poste de l'enseignant est fissuré et ne s'allume plus.",
                 "Salle P108", aerospatial, Categorie.INFORMATIQUE, Priorite.HAUTE, maria, maintenant.minusDays(2));
 
-        // --- Pannes In progress ---
         enCours("Climatisation défaillante", "La climatisation souffle de l'air chaud.",
                 "C3205", fils, Categorie.CLIMATISATION, Priorite.MOYENNE, maria, ion, maintenant.minusDays(4));
         enCours("Table endommagée", "Un pied de table est cassé, la table est instable.",
@@ -104,7 +93,6 @@ public class DataInitializer implements CommandLineRunner {
         enCours("Vidéoprojecteur sans image", "Le vidéoprojecteur affiche une image floue qui saute.",
                 "Amphithéâtre P2", medical, Categorie.AUDIOVISUEL, Priorite.MOYENNE, maria, radu, maintenant.minusDays(3));
 
-        // --- Pannes Done ---
         resolue("Ordinateur ne s'allume pas", "Le poste n°12 ne démarre plus.",
                 "C3201", fils, Categorie.INFORMATIQUE, Priorite.HAUTE, maria, ion, maintenant.minusDays(10));
         resolue("Accès Wi-Fi impossible", "Impossible de se connecter au réseau Wi-Fi dans l'amphithéâtre.",

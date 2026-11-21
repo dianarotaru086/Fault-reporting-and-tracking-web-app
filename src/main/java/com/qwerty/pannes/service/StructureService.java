@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/** Les campus avec leurs facultés : sert aux listes déroulantes. */
 @Service
 public class StructureService {
 

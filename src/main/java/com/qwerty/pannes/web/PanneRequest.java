@@ -6,10 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/**
- * Les données envoyées par le formulaire "Signaler une panne".
- * Les annotations définissent les règles de validation, appliquées côté serveur.
- */
+
 public record PanneRequest(
         @NotBlank(message = "Le titre est obligatoire.")
         @Size(min = 3, max = 100, message = "Le titre doit contenir entre 3 et 100 caractères.")

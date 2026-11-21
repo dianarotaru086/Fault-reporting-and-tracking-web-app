@@ -2,7 +2,6 @@ package com.qwerty.pannes.model;
 
 import jakarta.persistence.*;
 
-/** Une faculté, ou un service commun (ex. le Rectorat), situé sur un campus. */
 @Entity
 @Table(name = "unite")
 public class Unite {

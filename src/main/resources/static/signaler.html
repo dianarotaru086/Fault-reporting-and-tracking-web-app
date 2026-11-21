@@ -75,11 +75,11 @@
         const utilisateur = await exigerConnexion();
         if (!utilisateur) return;
 
-        // Avec ?id=... on modifie une panne existante ; sinon on en signale une nouvelle.
+
         const id = new URLSearchParams(window.location.search).get("id");
         const edition = id !== null;
 
-        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
+
         afficherMiseEnPage(utilisateur, edition ? "liste" : "signaler");
 
         const formulaire = document.getElementById("formulaire");
@@ -101,13 +101,12 @@
             document.getElementById("lien-annuler").href = "detail.html?id=" + encodeURIComponent(id);
         }
 
-        // "Choisir…" s'affiche au début mais ne peut plus être re-choisi
         function remplir(select, options) {
             select.innerHTML = '<option value="" selected disabled>Choisir…</option>' +
                 options.map(o => `<option value="${echapper(o.code)}">${echapper(o.libelle)}</option>`).join("");
         }
 
-        // La liste des facultés dépend du campus choisi
+
         function remplirUnites(campusId, uniteId) {
             selectUnite.innerHTML = '<option value="" selected disabled>Choisir…</option>';
             const campus = structure.find(c => String(c.id) === String(campusId));
@@ -123,7 +122,6 @@
 
         selectCampus.addEventListener("change", () => remplirUnites(selectCampus.value, null));
 
-        // Pour une nouvelle panne : on propose d'abord le campus et la faculté du profil
         async function preselection() {
             try {
                 const profil = await api("/api/profil");
@@ -133,7 +131,7 @@
                 const unite = campus.unites.find(u => u.nom === profil.unite);
                 remplirUnites(campus.id, unite ? unite.id : null);
             } catch (e) {
-                // pas grave : le formulaire reste simplement vide
+
             }
         }
 
@@ -149,7 +147,7 @@
         }
 
         if (edition) {
-            // En modification : on vérifie le droit, puis on pré-remplit le formulaire
+
             try {
                 const detail = await api("/api/pannes/" + encodeURIComponent(id));
                 if (!detail.peutModifier) {

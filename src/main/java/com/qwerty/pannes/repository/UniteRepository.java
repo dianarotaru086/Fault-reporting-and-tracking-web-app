@@ -9,7 +9,6 @@ import java.util.Optional;
 
 public interface UniteRepository extends JpaRepository<Unite, Long> {
 
-    /** Toutes les unités avec leur campus, en une seule requête. */
     @Query("select u from Unite u join fetch u.campus order by u.nom")
     List<Unite> toutes();
 

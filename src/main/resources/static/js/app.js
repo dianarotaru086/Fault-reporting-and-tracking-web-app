@@ -7,11 +7,11 @@
 
 const LIBELLES_ROLE = {
     UTILISATEUR: "Utilisateur",
-    RESPONSABLE: "Responsable technique"
+    RESPONSABLE: "Responsable technique",
+    ADMIN: "Administrateur"
 };
 
-/** Appelle l'API. En cas d'erreur, lève {statut, message, erreurs}.
- *  options.corps : objet envoyé en JSON ; options.formulaire : FormData (envoi de fichier). */
+
 async function api(url, options = {}) {
     const config = {
         method: options.method || "GET",
@@ -19,7 +19,7 @@ async function api(url, options = {}) {
         credentials: "same-origin"
     };
     if (options.formulaire) {
-        config.body = options.formulaire;   // le navigateur fixe lui-même le type multipart
+        config.body = options.formulaire;
     } else {
         config.headers["Content-Type"] = "application/json";
         if (options.corps !== undefined) {
@@ -44,14 +44,12 @@ async function api(url, options = {}) {
     return donnees;
 }
 
-/** Échappe les caractères spéciaux avant d'insérer du texte dans du HTML. */
 function echapper(texte) {
     const div = document.createElement("div");
     div.textContent = texte == null ? "" : String(texte);
     return div.innerHTML;
 }
 
-/** "Maria Ionescu" devient "MI" : affiché quand l'utilisateur n'a pas de photo. */
 function initiales(nomComplet) {
     const mots = String(nomComplet || "").trim().split(/\s+/).filter(Boolean);
     if (mots.length === 0) return "?";
@@ -59,8 +57,6 @@ function initiales(nomComplet) {
     const derniere = mots.length > 1 ? mots[mots.length - 1][0] : "";
     return (premiere + derniere).toUpperCase();
 }
-
-/** Vérifie la connexion ; sinon on va sur la page de connexion. */
 async function exigerConnexion() {
     try {
         return await api("/api/auth/me");
@@ -70,8 +66,6 @@ async function exigerConnexion() {
     }
 }
 
-/** Dessine la barre du haut et le menu autour du contenu de la page. */
-/** Dessine la barre du haut et le menu autour du contenu de la page. */
 function afficherMiseEnPage(utilisateur, pageActive) {
     const liens = [
         { id: "accueil", texte: "Accueil", url: "index.html" },
@@ -80,6 +74,9 @@ function afficherMiseEnPage(utilisateur, pageActive) {
         { id: "mes-pannes", texte: "Mes pannes", url: "mes-pannes.html" },
         { id: "profil", texte: "Mon profil", url: "profil.html" }
     ];
+    if (utilisateur.role === "ADMIN") {
+        liens.push({ id: "admin", texte: "Administration", url: "admin.html" });
+    }
 
     const menu = liens.map(l =>
         `<a href="${l.url}" class="${l.id === pageActive ? "actif" : ""}">${l.texte}</a>`
@@ -112,19 +109,11 @@ function afficherMiseEnPage(utilisateur, pageActive) {
     });
 }
 
-/* ---------- aides pour les formulaires ---------- */
-
-/** Efface tous les messages d'erreur d'un formulaire. */
 function effacerErreurs(racine) {
     racine.querySelectorAll(".champ-erreur").forEach(e => e.classList.remove("champ-erreur"));
     racine.querySelectorAll(".message-champ").forEach(e => e.textContent = "");
 }
 
-/**
- * Affiche sous chaque champ le message envoyé par le serveur.
- * Chaque champ est un <div class="champ" data-champ="nom"> contenant un .message-champ.
- * Renvoie le nombre de champs trouvés.
- */
 function afficherErreursChamps(racine, erreurs) {
     let trouves = 0;
     for (const [nom, message] of Object.entries(erreurs || {})) {
@@ -137,21 +126,18 @@ function afficherErreursChamps(racine, erreurs) {
     return trouves;
 }
 
-/** "2026-11-14T16:38:00" devient "14/11/2026". */
 function formaterDate(iso) {
     return iso ? new Date(iso).toLocaleDateString("fr-FR") : "";
 }
 
-/** "IN_PROGRESS" devient "statut-in-progress" : la classe CSS du point de couleur. */
 function classeStatut(statut) {
     return "statut-" + String(statut).toLowerCase().replace(/_/g, "-");
 }
-/** "2026-11-14T16:38:00" devient "14/11/2026 16:38". */
+
 function formaterDateHeure(iso) {
     return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
 }
-/** Le tableau HTML d'une liste de pannes (utilisé par "Mes pannes"). */
-/** "Noul Local (campus principal)" devient "Noul Local" : version courte pour les tableaux. */
+
 function campusCourt(nom) {
     return nom ? nom.replace(/\s*\(.*?\)/, "") : "";
 }

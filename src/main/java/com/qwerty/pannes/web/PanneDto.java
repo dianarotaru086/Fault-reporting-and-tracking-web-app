@@ -4,7 +4,6 @@ import com.qwerty.pannes.model.*;
 
 import java.time.LocalDateTime;
 
-/** Ce que le serveur renvoie au navigateur pour décrire une panne. */
 public record PanneDto(
         Long id,
         String titre,
@@ -26,7 +25,6 @@ public record PanneDto(
         Long uniteId,
         String unite) {
 
-    /** À appeler pendant une transaction : les relations sont chargées à la demande. */
     public static PanneDto de(Panne p) {
         Unite unite = p.getUnite();
         Campus campus = unite == null ? null : unite.getCampus();

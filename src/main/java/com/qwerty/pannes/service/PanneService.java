@@ -24,7 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
-/** La logique métier des pannes. Le contrôleur reste fin, les règles sont ici. */
+
 @Service
 public class PanneService {
 
@@ -42,15 +42,6 @@ public class PanneService {
         this.interventions = interventions;
         this.unites = unites;
     }
-
-    // ------------------------------------------------------------------
-    // Signaler une panne
-    // ------------------------------------------------------------------
-
-    /**
-     * Enregistre une nouvelle panne au statut New et note le signalement dans l'historique.
-     * @Transactional : les deux enregistrements réussissent ensemble, ou aucun.
-     */
     @Transactional
     public PanneDto signaler(PanneRequest demande, Long utilisateurId) {
         Utilisateur signaleur = connecte(utilisateurId);
@@ -71,18 +62,6 @@ public class PanneService {
         return PanneDto.de(panne);
     }
 
-    // ------------------------------------------------------------------
-    // Liste, recherche et filtres
-    // ------------------------------------------------------------------
-
-    /**
-     * Liste les pannes, de la plus récente à la plus ancienne, en combinant les critères.
-     * Un critère absent (null) est simplement ignoré. Les critères présents s'ajoutent (ET).
-     *
-     * Les filtres campus / faculté / catégorie / statut / priorité sont appliqués par la base.
-     * La recherche texte est appliquée ensuite en Java : elle ignore majuscules, accents
-     * et ponctuation (« electricite » trouve « Électricité », « wifi » trouve « Wi-Fi »).
-     */
     @Transactional(readOnly = true)
     public List<PanneDto> lister(String recherche, Long campusId, Long uniteId,
                                  Categorie categorie, Statut statut, Priorite priorite) {
@@ -114,22 +93,11 @@ public class PanneService {
                 .toList();
     }
 
-    /** Le détail d'une panne, avec son historique et les droits de l'utilisateur connecté. */
     @Transactional(readOnly = true)
     public PanneDetailDto detail(Long panneId, Long utilisateurId) {
         return construireDetail(trouver(panneId), connecte(utilisateurId));
     }
 
-    // ------------------------------------------------------------------
-    // Prise en charge et résolution
-    // ------------------------------------------------------------------
-
-    /**
-     * RÈGLES SPÉCIFIQUES :
-     *  1. un responsable ne prend en charge que les pannes de SON campus (403 sinon) ;
-     *  2. une panne ne peut être prise que si elle est encore New : si un autre responsable
-     *     l'a déjà prise, la demande est refusée (409) avec son nom.
-     */
     @Transactional
     public PanneDetailDto prendreEnCharge(Long panneId, Long utilisateurId) {
         Utilisateur responsable = connecte(utilisateurId);
@@ -168,7 +136,7 @@ public class PanneService {
         return construireDetail(panne, responsable);
     }
 
-    /** Seul le responsable qui a pris la panne en charge peut la marquer comme résolue. */
+
     @Transactional
     public PanneDetailDto resoudre(Long panneId, Long utilisateurId, ResolutionRequest demande) {
         Utilisateur utilisateur = connecte(utilisateurId);
@@ -197,11 +165,6 @@ public class PanneService {
         return construireDetail(panne, utilisateur);
     }
 
-    // ------------------------------------------------------------------
-    // Mes pannes, modification, suppression
-    // ------------------------------------------------------------------
-
-    /** Les pannes signalées par l'utilisateur et, s'il est responsable, celles qu'il a prises en charge. */
     @Transactional(readOnly = true)
     public MesPannesDto mesPannes(Long utilisateurId) {
         Utilisateur utilisateur = connecte(utilisateurId);
@@ -217,7 +180,7 @@ public class PanneService {
         return new MesPannesDto(signalees, priseEnCharge);
     }
 
-    /** Modifier une panne : uniquement par celui qui l'a signalée, et tant qu'elle est New. */
+
     @Transactional
     public PanneDto modifier(Long panneId, PanneRequest demande, Long utilisateurId) {
         Utilisateur utilisateur = connecte(utilisateurId);
@@ -237,19 +200,16 @@ public class PanneService {
         return PanneDto.de(panne);
     }
 
-    /** Supprimer une panne (avec son historique) : mêmes règles que la modification. */
     @Transactional
     public void supprimer(Long panneId, Long utilisateurId) {
         Utilisateur utilisateur = connecte(utilisateurId);
-        Panne panne = trouverModifiable(panneId, utilisateur);
+        Panne panne = utilisateur.getRole() == Role.ADMIN
+                ? trouver(panneId)
+                : trouverModifiable(panneId, utilisateur);
 
         interventions.deleteByPanneId(panne.getId());
         pannes.delete(panne);
     }
-
-    // ------------------------------------------------------------------
-    // Méthodes internes
-    // ------------------------------------------------------------------
 
     private Utilisateur connecte(Long id) {
         return utilisateurs.findById(id)
@@ -261,16 +221,11 @@ public class PanneService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Panne introuvable."));
     }
 
-    /** La faculté ou le service choisi ; l'erreur s'affiche sous le champ concerné. */
     private Unite trouverUnite(Long id) {
         return unites.findById(id)
                 .orElseThrow(() -> new ErreurChamp("uniteId", "Faculté ou service inconnu."));
     }
 
-    /**
-     * RÈGLE : seule la personne qui a signalé la panne peut la modifier ou la supprimer,
-     * et seulement tant que personne ne l'a prise en charge (statut New).
-     */
     private Panne trouverModifiable(Long panneId, Utilisateur utilisateur) {
         Panne panne = trouver(panneId);
 
@@ -285,12 +240,10 @@ public class PanneService {
         return panne;
     }
 
-    /** Le campus de la panne (celui de sa faculté), ou null si elle n'est rattachée à aucune. */
     private static Campus campusDe(Panne panne) {
         return panne.getUnite() == null ? null : panne.getUnite().getCampus();
     }
 
-    /** Vrai si la panne relève du campus du responsable. */
     private static boolean memeCampus(Utilisateur responsable, Panne panne) {
         Campus campusPanne = campusDe(panne);
         if (campusPanne == null) {
@@ -300,7 +253,6 @@ public class PanneService {
                 && responsable.getCampus().getId().equals(campusPanne.getId());
     }
 
-    /** "Noul Local (campus principal)" devient "Noul Local" dans les messages. */
     private static String nomCourt(Campus campus) {
         return campus.getNom().replaceAll("\\s*\\(.*?\\)", "");
     }
@@ -312,7 +264,6 @@ public class PanneService {
         return "Cette panne relève du campus " + nomCourt(campusDe(panne)) + ". " + sien;
     }
 
-    /** Assemble la panne, son historique et ce que l'utilisateur a le droit d'en faire. */
     private PanneDetailDto construireDetail(Panne panne, Utilisateur utilisateur) {
         List<InterventionDto> historique = interventions
                 .findByPanneIdOrderByDateInterventionAsc(panne.getId()).stream()
@@ -320,6 +271,7 @@ public class PanneService {
                 .toList();
 
         boolean estResponsableTechnique = utilisateur.getRole() == Role.RESPONSABLE;
+        boolean estAdmin = utilisateur.getRole() == Role.ADMIN;
         boolean estLeResponsableDeLaPanne = panne.getResponsable() != null
                 && panne.getResponsable().getId().equals(utilisateur.getId());
         boolean estLeSignaleur = panne.getSignaleur().getId().equals(utilisateur.getId());
@@ -334,10 +286,10 @@ public class PanneService {
                 estResponsableTechnique && panne.getStatut() == Statut.NEW && bonCampus,
                 estLeResponsableDeLaPanne && panne.getStatut() == Statut.IN_PROGRESS,
                 estLeSignaleur && panne.getStatut() == Statut.NEW,
+                (estLeSignaleur && panne.getStatut() == Statut.NEW) || estAdmin,
                 avertissement);
     }
 
-    /** Vrai si le texte cherché apparaît dans le titre, la description, le lieu ou la catégorie. */
     private static boolean correspond(Panne p, String cherche) {
         return normaliser(p.getTitre()).contains(cherche)
                 || normaliser(p.getDescription()).contains(cherche)
@@ -345,11 +297,6 @@ public class PanneService {
                 || normaliser(p.getCategorie().getLibelle()).contains(cherche);
     }
 
-    /**
-     * Met un texte sous une forme comparable : sans accents, sans ponctuation,
-     * en minuscules, avec des espaces simples.
-     * Exemple : « Électricité » devient « electricite », « Wi-Fi » devient « wifi ».
-     */
     private static String normaliser(String texte) {
         if (texte == null) {
             return "";

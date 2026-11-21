@@ -26,7 +26,6 @@
         const utilisateur = await exigerConnexion();
         if (!utilisateur) return;
 
-        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
         afficherMiseEnPage(utilisateur, "mes-pannes");
 
         try {

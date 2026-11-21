@@ -44,7 +44,6 @@ public class ProfilController {
         return service.changerPhoto(Connexion.exiger(session), photo);
     }
 
-    /** L'image elle-même, pour les balises <img>. */
     @GetMapping("/photo")
     public ResponseEntity<byte[]> photo(HttpSession session) {
         PhotoProfil photo = service.photo(Connexion.exiger(session));

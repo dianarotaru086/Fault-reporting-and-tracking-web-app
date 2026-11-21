@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Administration - Gestion des pannes</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="contenu">
+    <h1>Administration</h1>
+    <p>Tous les comptes de l'application. Un compte lié à des pannes ne peut pas être supprimé :
+        supprimez d'abord ces pannes.</p>
+
+    <div id="alerte" class="alerte" hidden></div>
+
+    <form id="filtres" class="filtres" novalidate>
+        <div class="large">
+            <label for="q">Rechercher</label>
+            <input type="search" id="q" placeholder="Nom, e-mail, campus, faculté…" autocomplete="off">
+        </div>
+        <div>
+            <label for="filtre-role">Rôle</label>
+            <select id="filtre-role">
+                <option value="">Tous</option>
+                <option value="UTILISATEUR">Utilisateur</option>
+                <option value="RESPONSABLE">Responsable technique</option>
+                <option value="ADMIN">Administrateur</option>
+            </select>
+        </div>
+        <div class="boutons">
+            <button type="submit">Filtrer</button>
+            <button type="button" class="secondaire" id="reinitialiser">Réinitialiser</button>
+        </div>
+    </form>
+
+
+    <form id="edition" class="zone-action" novalidate hidden>
+        <h2 id="titre-edition"></h2>
+        <div class="champ" data-champ="role">
+            <label for="role">Rôle</label>
+            <select id="role">
+                <option value="UTILISATEUR">Utilisateur</option>
+                <option value="RESPONSABLE">Responsable technique</option>
+                <option value="ADMIN">Administrateur</option>
+            </select>
+            <div class="message-champ"></div>
+        </div>
+        <div class="champ" data-champ="campusId" id="zone-campus">
+            <label for="campusId">Campus</label>
+            <select id="campusId"></select>
+            <div class="message-champ"></div>
+        </div>
+        <div class="champ" data-champ="uniteId" id="zone-unite">
+            <label for="uniteId">Faculté ou service</label>
+            <select id="uniteId"></select>
+            <div class="message-champ"></div>
+        </div>
+        <div class="boutons">
+            <button type="submit">Enregistrer</button>
+            <button type="button" class="secondaire" id="annuler-edition">Annuler</button>
+        </div>
+    </form>
+
+
+    <div id="suppression" class="zone-action confirmation" hidden>
+        <p id="texte-suppression"></p>
+        <button type="button" class="danger" id="confirmer-suppression">Oui, supprimer ce compte</button>
+        <button type="button" class="secondaire" id="annuler-suppression">Annuler</button>
+    </div>
+
+    <p class="resultat" id="resultat"></p>
+    <div class="tableau" id="tableau"></div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+    (async () => {
+        const utilisateur = await exigerConnexion();
+        if (!utilisateur) return;
+        if (utilisateur.role !== "ADMIN") {
+            window.location.href = "index.html";
+            return;
+        }
+
+
+        afficherMiseEnPage(utilisateur, "admin");
+
+        const alerte = document.getElementById("alerte");
+        const formFiltres = document.getElementById("filtres");
+        const formEdition = document.getElementById("edition");
+        const blocSuppression = document.getElementById("suppression");
+        const selectRole = document.getElementById("role");
+        const selectCampus = document.getElementById("campusId");
+        const selectUnite = document.getElementById("uniteId");
+        let comptes = [];
+        let structure = [];
+        let cible = null;
+
+        function montrer(message, succes) {
+            alerte.textContent = message;
+            alerte.classList.toggle("succes", !!succes);
+            alerte.hidden = false;
+            window.scrollTo(0, 0);
+        }
+
+
+        function simple(texte) {
+            return String(texte || "").normalize("NFD").replace(/\p{M}+/gu, "").toLowerCase();
+        }
+
+
+        function afficher() {
+            const q = simple(document.getElementById("q").value.trim());
+            const role = document.getElementById("filtre-role").value;
+
+            const visibles = comptes.filter(c =>
+                (!role || c.role === role) &&
+                (!q || simple([c.prenom, c.nom, c.email, c.campus, c.unite].join(" ")).includes(q)));
+
+            document.getElementById("resultat").textContent =
+                visibles.length + (visibles.length > 1 ? " comptes" : " compte");
+
+            if (visibles.length === 0) {
+                document.getElementById("tableau").innerHTML = '<p class="vide">Aucun compte ne correspond.</p>';
+                return;
+            }
+
+            const lignes = visibles.map(c => `
+                <tr>
+                    <td>${echapper(c.prenom)} ${echapper(c.nom)}</td>
+                    <td>${echapper(c.email)}</td>
+                    <td>${echapper(c.roleLibelle)}</td>
+                    <td>${c.unite ? `<strong>${echapper(c.unite)}</strong><br>` : ""}${c.campus ? echapper(campusCourt(c.campus)) : (c.unite ? "" : "—")}</td>
+                    <td>${c.nbSignalees} signalée(s)<br>${c.nbPrises} prise(s) en charge</td>
+                    <td>${formaterDate(c.dateInscription)}</td>
+                    <td>
+                        <button type="button" class="secondaire" data-action="modifier" data-id="${c.id}">Modifier</button>
+                        <button type="button" class="danger" data-action="supprimer" data-id="${c.id}">Supprimer</button>
+                    </td>
+                </tr>`).join("");
+
+            document.getElementById("tableau").innerHTML = `
+                <table>
+                    <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Campus / faculté</th>
+                               <th>Pannes</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+                    <tbody>${lignes}</tbody>
+                </table>`;
+        }
+
+        async function charger() {
+            try {
+                comptes = await api("/api/admin/utilisateurs");
+                afficher();
+            } catch (e) {
+                montrer(e.message, false);
+            }
+        }
+
+        function remplirUnites(campusId, uniteId) {
+            selectUnite.innerHTML = '<option value="" selected disabled>Choisir…</option>';
+            const campus = structure.find(c => String(c.id) === String(campusId));
+            if (!campus) {
+                selectUnite.options[0].textContent = "Choisissez d'abord un campus";
+                selectUnite.disabled = true;
+                return;
+            }
+            campus.unites.forEach(u => selectUnite.add(new Option(u.nom, u.id)));
+            selectUnite.disabled = false;
+            if (uniteId) selectUnite.value = uniteId;
+        }
+
+
+        function adapterFormulaire() {
+            const role = selectRole.value;
+            document.getElementById("zone-campus").hidden = role === "ADMIN";
+            document.getElementById("zone-unite").hidden = role !== "UTILISATEUR";
+        }
+
+        function ouvrirEdition(compte) {
+            cible = compte;
+            blocSuppression.hidden = true;
+            effacerErreurs(formEdition);
+
+            document.getElementById("titre-edition").textContent =
+                "Modifier : " + compte.prenom + " " + compte.nom;
+            selectRole.value = compte.role;
+
+            selectCampus.length = 0;
+            selectCampus.add(new Option("Choisir…", ""));
+            selectCampus.options[0].disabled = true;
+            structure.forEach(c => selectCampus.add(new Option(c.nom, c.id)));
+            selectCampus.value = compte.campusId || "";
+            remplirUnites(compte.campusId, compte.uniteId);
+
+            adapterFormulaire();
+            formEdition.hidden = false;
+            formEdition.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+        selectRole.addEventListener("change", adapterFormulaire);
+        selectCampus.addEventListener("change", () => remplirUnites(selectCampus.value, null));
+        document.getElementById("annuler-edition").addEventListener("click", () => {
+            formEdition.hidden = true;
+            cible = null;
+        });
+
+        formEdition.addEventListener("submit", async (evenement) => {
+            evenement.preventDefault();
+            effacerErreurs(formEdition);
+            alerte.hidden = true;
+            try {
+                await api("/api/admin/utilisateurs/" + cible.id, {
+                    method: "PUT",
+                    corps: {
+                        role: selectRole.value,
+                        campusId: selectCampus.value ? Number(selectCampus.value) : null,
+                        uniteId: selectUnite.value ? Number(selectUnite.value) : null
+                    }
+                });
+                formEdition.hidden = true;
+                montrer("Le compte de " + cible.prenom + " " + cible.nom + " a été mis à jour.", true);
+                cible = null;
+                await charger();
+            } catch (e) {
+                if (afficherErreursChamps(formEdition, e.erreurs) === 0) montrer(e.message, false);
+            }
+        });
+
+
+        function ouvrirSuppression(compte) {
+            cible = compte;
+            formEdition.hidden = true;
+            document.getElementById("texte-suppression").textContent =
+                "Supprimer définitivement le compte de " + compte.prenom + " " + compte.nom +
+                " (" + compte.email + ") ?";
+            blocSuppression.hidden = false;
+            blocSuppression.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+        document.getElementById("annuler-suppression").addEventListener("click", () => {
+            blocSuppression.hidden = true;
+            cible = null;
+        });
+        document.getElementById("confirmer-suppression").addEventListener("click", async () => {
+            alerte.hidden = true;
+            const compte = cible;
+            try {
+                await api("/api/admin/utilisateurs/" + compte.id, { method: "DELETE" });
+                blocSuppression.hidden = true;
+                cible = null;
+                montrer("Le compte de " + compte.prenom + " " + compte.nom + " a été supprimé.", true);
+                await charger();
+            } catch (e) {
+                blocSuppression.hidden = true;
+                cible = null;
+                montrer(e.message, false);
+            }
+        });
+
+
+        document.getElementById("tableau").addEventListener("click", (evenement) => {
+            const bouton = evenement.target.closest("button[data-action]");
+            if (!bouton) return;
+            const compte = comptes.find(c => String(c.id) === bouton.dataset.id);
+            if (!compte) return;
+            alerte.hidden = true;
+            if (bouton.dataset.action === "modifier") ouvrirEdition(compte);
+            else ouvrirSuppression(compte);
+        });
+
+
+        formFiltres.addEventListener("submit", (evenement) => {
+            evenement.preventDefault();
+            afficher();
+        });
+        document.getElementById("reinitialiser").addEventListener("click", () => {
+            formFiltres.reset();
+            afficher();
+        });
+
+        try {
+            structure = await api("/api/structure");
+        } catch (e) {
+            montrer(e.message, false);
+        }
+        await charger();
+    })();
+</script>
+</body>
+</html>

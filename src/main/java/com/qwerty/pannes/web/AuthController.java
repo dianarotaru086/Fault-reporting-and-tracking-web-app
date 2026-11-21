@@ -18,12 +18,11 @@ public class AuthController {
 
     public static final String SESSION_KEY = "utilisateurId";
 
-    /** Ce que le navigateur envoie pour se connecter. */
     public record LoginRequest(
             @NotBlank(message = "L'e-mail est obligatoire") String email,
             @NotBlank(message = "Le mot de passe est obligatoire") String motDePasse) {}
 
-    /** Ce que le serveur renvoie : jamais le mot de passe. */
+
     public record UtilisateurDto(Long id, String nomComplet, String email, Role role, String photoUrl) {
         static UtilisateurDto de(Utilisateur u, String photoUrl) {
             return new UtilisateurDto(u.getId(), u.getNomComplet(), u.getEmail(), u.getRole(), photoUrl);
@@ -56,7 +55,7 @@ public class AuthController {
         session.invalidate();
     }
 
-    /** Qui est connecté ? Sert à la page pour afficher le nom, le rôle et la photo. */
+
     @GetMapping("/me")
     public UtilisateurDto me(HttpSession session) {
         Object id = session.getAttribute(SESSION_KEY);

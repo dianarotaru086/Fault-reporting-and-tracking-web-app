@@ -39,25 +39,20 @@ public class Panne {
     @Column(name = "date_resolution")
     private LocalDateTime dateResolution;
 
-    /** L'utilisateur qui a signalé la panne (obligatoire). */
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "signaleur_id", nullable = false)
     private Utilisateur signaleur;
 
-    /** Le responsable qui traite la panne : vide tant que la panne n'est pas prise en charge. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responsable_id")
     private Utilisateur responsable;
 
-    /** La faculté ou le service concerné : le campus s'en déduit. */
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unite_id")
     private Unite unite;
 
-    /**
-     * Verrouillage optimiste : si deux responsables valident la prise en charge
-     * exactement au même moment, le second échoue au lieu d'écraser le premier.
-     */
     @Version
     private Long version;
 

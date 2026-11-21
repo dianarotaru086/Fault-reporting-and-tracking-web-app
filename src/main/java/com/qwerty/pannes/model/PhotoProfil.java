@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-/** La photo de profil d'un utilisateur, rangée à part pour ne pas alourdir chaque lecture d'utilisateur. */
 @Entity
 @Table(name = "photo_profil")
 public class PhotoProfil {

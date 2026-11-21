@@ -21,7 +21,6 @@ public class Utilisateur {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    /** Mot de passe haché avec BCrypt, jamais en clair. */
     @Column(name = "mot_de_passe", nullable = false, length = 100)
     private String motDePasse;
 
@@ -35,12 +34,10 @@ public class Utilisateur {
     @Column(length = 20)
     private String telephone;
 
-    /** Le campus de rattachement (pour un responsable : celui dont il s'occupe). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campus_id")
     private Campus campus;
 
-    /** La faculté ou le service de l'utilisateur (vide pour un responsable). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unite_id")
     private Unite unite;

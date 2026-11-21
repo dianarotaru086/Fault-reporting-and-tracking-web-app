@@ -76,7 +76,6 @@
     const selectUnite = document.getElementById("uniteId");
     let structure = [];
 
-    // Les campus et leurs facultés viennent du serveur
     (async () => {
         try {
             structure = await api("/api/structure");
@@ -87,7 +86,6 @@
         }
     })();
 
-    // Quand le campus change, la liste des facultés change avec lui
     selectCampus.addEventListener("change", () => {
         const campus = structure.find(c => String(c.id) === selectCampus.value);
         selectUnite.length = 1;                       // garde seulement "Choisir…"

@@ -7,75 +7,77 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="login">
-        <section class="gauche">
-            <div class="nom"><span class="marque"></span>Gestion des <em>pannes</em></div>
-            <div class="phrase">
-                <blockquote>Une panne signalée doit être une panne <em>suivie</em>.</blockquote>
+<div class="login">
+    <section class="gauche">
+        <div class="nom"><span class="marque"></span>Gestion des <em>pannes</em></div>
+        <div class="phrase">
+            <blockquote>Une panne signalée doit être une panne <em>suivie</em>.</blockquote>
+        </div>
+    </section>
+
+    <section class="droite">
+        <h1>Connexion</h1>
+
+        <div id="alerte" class="alerte" hidden></div>
+
+        <form id="formulaire" novalidate>
+            <div id="champ-email">
+                <label for="email">Adresse e-mail</label>
+                <input type="email" id="email" autocomplete="username" autofocus>
+                <div class="message-champ" id="erreur-email"></div>
             </div>
-        </section>
+            <div id="champ-motDePasse">
+                <label for="motDePasse">Mot de passe</label>
+                <input type="password" id="motDePasse" autocomplete="current-password">
+                <div class="message-champ" id="erreur-motDePasse"></div>
+            </div>
+            <button type="submit">Se connecter</button>
+        </form>
 
-        <section class="droite">
-            <h1>Connexion</h1>
+        <p class="lien-bas">Pas encore de compte ? <a href="inscription.html">Créer un compte</a></p>
+    </section>
+</div>
 
-            <div id="alerte" class="alerte" hidden></div>
+<script src="js/app.js"></script>
+<script>
+    const formulaire = document.getElementById("formulaire");
+    const alerte = document.getElementById("alerte");
+    const CHAMPS = ["email", "motDePasse"];
 
-            <form id="formulaire" novalidate>
-                <div id="champ-email">
-                    <label for="email">Adresse e-mail</label>
-                    <input type="email" id="email" autocomplete="username" autofocus>
-                    <div class="message-champ" id="erreur-email"></div>
-                </div>
-                <div id="champ-motDePasse">
-                    <label for="motDePasse">Mot de passe</label>
-                    <input type="password" id="motDePasse" autocomplete="current-password">
-                    <div class="message-champ" id="erreur-motDePasse"></div>
-                </div>
-                <button type="submit">Se connecter</button>
-            </form>
-        </section>
-    </div>
-
-    <script src="js/app.js"></script>
-    <script>
-        const formulaire = document.getElementById("formulaire");
-        const alerte = document.getElementById("alerte");
-        const CHAMPS = ["email", "motDePasse"];
-
-        function effacerErreurs() {
-            alerte.hidden = true;
-            CHAMPS.forEach(champ => {
-                document.getElementById("champ-" + champ).classList.remove("champ-erreur");
-                document.getElementById("erreur-" + champ).textContent = "";
-            });
-        }
-
-        formulaire.addEventListener("submit", async (evenement) => {
-            evenement.preventDefault();
-            effacerErreurs();
-
-            try {
-                await api("/api/auth/login", {
-                    method: "POST",
-                    corps: {
-                        email: document.getElementById("email").value,
-                        motDePasse: document.getElementById("motDePasse").value
-                    }
-                });
-                window.location.href = "index.html";
-            } catch (e) {
-                const erreurs = e.erreurs || {};
-                for (const [champ, message] of Object.entries(erreurs)) {
-                    document.getElementById("champ-" + champ)?.classList.add("champ-erreur");
-                    const zone = document.getElementById("erreur-" + champ);
-                    if (zone) zone.textContent = message;
-                }
-                if (Object.keys(erreurs).length === 0) {
-                    alerte.textContent = e.message || "Une erreur est survenue.";
-                    alerte.hidden = false;
-                }
-            }
+    function effacerErreurs() {
+        alerte.hidden = true;
+        CHAMPS.forEach(champ => {
+            document.getElementById("champ-" + champ).classList.remove("champ-erreur");
+            document.getElementById("erreur-" + champ).textContent = "";
         });
-    </script>
+    }
+
+    formulaire.addEventListener("submit", async (evenement) => {
+        evenement.preventDefault();
+        effacerErreurs();
+
+        try {
+            await api("/api/auth/login", {
+                method: "POST",
+                corps: {
+                    email: document.getElementById("email").value,
+                    motDePasse: document.getElementById("motDePasse").value
+                }
+            });
+            window.location.href = "index.html";
+        } catch (e) {
+            const erreurs = e.erreurs || {};
+            for (const [champ, message] of Object.entries(erreurs)) {
+                document.getElementById("champ-" + champ)?.classList.add("champ-erreur");
+                const zone = document.getElementById("erreur-" + champ);
+                if (zone) zone.textContent = message;
+            }
+            if (Object.keys(erreurs).length === 0) {
+                alerte.textContent = e.message || "Une erreur est survenue.";
+                alerte.hidden = false;
+            }
+        }
+    });
+</script>
 </body>
 </html>

@@ -10,7 +10,6 @@ import java.util.Optional;
 
 public interface PhotoProfilRepository extends JpaRepository<PhotoProfil, Long> {
 
-    /** Seulement la date : permet de savoir si une photo existe sans charger l'image. */
     @Query("select p.dateMiseAJour from PhotoProfil p where p.utilisateurId = :id")
     Optional<LocalDateTime> dateMiseAJour(@Param("id") Long id);
 }

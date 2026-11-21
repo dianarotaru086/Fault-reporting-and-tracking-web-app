@@ -5,7 +5,7 @@ import com.qwerty.pannes.model.TypeAction;
 
 import java.time.LocalDateTime;
 
-/** Une ligne de l'historique d'une panne. */
+
 public record InterventionDto(
         Long id,
         TypeAction action,

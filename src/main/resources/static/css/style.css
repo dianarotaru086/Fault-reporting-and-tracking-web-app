@@ -1,7 +1,3 @@
-/* Gestion des pannes - feuille de style
-   Idée : un carnet d'atelier. Papier chaud, encre foncée, un orange de
-   signalisation pour tout ce qui demande l'attention. */
-
 :root {
     --papier: #f4f0e8;
     --papier-fonce: #ebe5d8;
@@ -32,7 +28,7 @@ body {
 a { color: var(--encre); text-decoration-color: var(--signal); text-underline-offset: 3px; }
 a:hover { color: var(--signal-fonce); }
 
-/* ---------- marque ---------- */
+
 .nom { font-family: var(--titres); font-size: 20px; display: flex; align-items: center; gap: 10px; }
 .nom em { color: inherit; font-style: italic; }
 .marque {
@@ -42,7 +38,7 @@ a:hover { color: var(--signal-fonce); }
     flex-shrink: 0;
 }
 
-/* ---------- barre du haut ---------- */
+
 .barre-haut {
     background: #e9e2d3;
     color: var(--encre);
@@ -69,7 +65,7 @@ a:hover { color: var(--signal-fonce); }
 }
 .barre-haut .compte button:hover { background: var(--encre); color: var(--papier); }
 
-/* ---------- menu + contenu ---------- */
+
 .conteneur { display: flex; min-height: calc(100vh - 58px); }
 
 .menu {
@@ -104,7 +100,7 @@ h1 {
 h2 { font-family: var(--titres); font-size: 20px; margin: 28px 0 8px; }
 .sous-titre { margin: 0 0 26px; color: var(--doux); font-size: 17px; max-width: 56ch; }
 
-/* ---------- formulaires ---------- */
+
 label { display: block; margin: 18px 0 5px; font-weight: 600; }
 
 input, select, textarea {
@@ -153,7 +149,7 @@ button:hover, .bouton:hover { background: var(--signal-fonce); color: #fff; }
 }
 .alerte.succes { border-left-color: var(--vert); }
 
-/* ---------- tableaux ---------- */
+
 table { width: 100%; border-collapse: collapse; background: var(--blanc); }
 th, td { padding: 11px 14px; border-bottom: 1px solid var(--trait); text-align: left; }
 th {
@@ -166,7 +162,7 @@ th {
 }
 tbody tr:hover { background: #faf6ee; }
 
-/* ---------- statuts : un point de couleur + le mot ---------- */
+
 .statut::before {
     content: "";
     display: inline-block;
@@ -179,7 +175,7 @@ tbody tr:hover { background: #faf6ee; }
 .statut-in-progress::before { background: var(--ambre); }
 .statut-done::before { background: var(--vert); }
 
-/* ---------- accueil : liste d'actions ---------- */
+
 .actions { border-top: 1px solid var(--trait); max-width: 640px; margin-top: 24px; }
 .actions a {
     display: flex;
@@ -195,10 +191,10 @@ tbody tr:hover { background: #faf6ee; }
 .actions a:hover { background: var(--papier-fonce); }
 .actions a:hover::after { transform: translateX(5px); }
 
-/* ---------- page de connexion ---------- */
+
 .login { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 100vh; }
 
-/* panneau de gauche : presque la couleur du papier, à peine plus chaud */
+
 .login .gauche {
     background: #e9e2d3;
     color: var(--encre);
@@ -231,13 +227,13 @@ tbody tr:hover { background: #faf6ee; }
     main.contenu { padding: 24px; }
 }
 
-/* ---------- formulaire de signalement ---------- */
+
 .formulaire-page { max-width: 640px; }
 .formulaire-page textarea { min-height: 140px; resize: vertical; }
 .deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
 .boutons { margin-top: 28px; display: flex; align-items: center; gap: 12px; }
 
-/* ---------- liste des pannes ---------- */
+
 .filtres {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -257,7 +253,7 @@ tbody tr:hover { background: #faf6ee; }
 @media (max-width: 980px) {
     .filtres { grid-template-columns: 1fr 1fr; }
 }
-/* ---------- détail d'une panne ---------- */
+
 .retour { margin: 0 0 14px; }
 .infos {
     display: grid;
@@ -291,7 +287,7 @@ tbody tr:hover { background: #faf6ee; }
 .historique .quand { font-size: 14px; }
 .historique .quoi { font-weight: 600; }
 .historique .commentaire { margin: 4px 0 0; white-space: pre-wrap; }
-/* L'attribut hidden doit toujours gagner, même sur les boutons */
+
 [hidden] { display: none !important; }
 
 .confirmation {
@@ -303,13 +299,13 @@ tbody tr:hover { background: #faf6ee; }
 .confirmation p { margin: 0 0 12px; font-weight: 600; }
 .confirmation button { margin: 0 10px 0 0; }
 
-/* ---------- boutons en rangée, bouton de suppression ---------- */
+
 .rangee { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
 .rangee button, .rangee .bouton { margin: 0; }
 
 button.danger, .danger { background: var(--erreur); border-color: #7d1c21; color: #fff; }
 button.danger:hover, .danger:hover { background: #7d1c21; }
-/* ---------- avatar et profil ---------- */
+
 .avatar-petit {
     display: inline-flex;
     align-items: center;
@@ -348,3 +344,15 @@ button.danger:hover, .danger:hover { background: #7d1c21; }
     font-family: var(--titres);
     font-size: 46px;
 }
+
+.avertissement {
+    border-left: 5px solid var(--erreur);
+    background: var(--blanc);
+    color: var(--erreur);
+    font-weight: 600;
+    padding: 12px 16px;
+    margin: 6px 0 14px;
+    max-width: 62ch;
+}
+.lien-bas { margin-top: 22px; }
+.tableau td button { padding: 5px 12px; font-size: 14px; margin: 0 6px 4px 0; }

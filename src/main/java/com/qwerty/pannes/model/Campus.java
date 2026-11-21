@@ -2,7 +2,6 @@ package com.qwerty.pannes.model;
 
 import jakarta.persistence.*;
 
-/** Un campus de l'université : Noul Local, Polizu, Leu. */
 @Entity
 @Table(name = "campus")
 public class Campus {
@@ -18,7 +17,7 @@ public class Campus {
     private String adresse;
 
     protected Campus() {
-        // requis par JPA
+
     }
 
     public Campus(String nom, String adresse) {

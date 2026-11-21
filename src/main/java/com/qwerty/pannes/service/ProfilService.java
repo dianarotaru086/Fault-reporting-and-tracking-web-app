@@ -24,7 +24,6 @@ import com.qwerty.pannes.repository.CampusRepository;
 import com.qwerty.pannes.repository.UniteRepository;
 import com.qwerty.pannes.web.InscriptionRequest;
 
-/** Le profil d'un utilisateur : informations, photo, mot de passe. */
 @Service
 public class ProfilService {
 
@@ -51,10 +50,6 @@ public class ProfilService {
         return versDto(connecte(utilisateurId));
     }
 
-    /**
-     * Créer un compte. Le rôle est toujours UTILISATEUR : on ne se donne pas soi-même les droits de responsable.
-     * Le serveur revérifie que la faculté appartient bien au campus choisi.
-     */
     @Transactional
     public Utilisateur inscrire(InscriptionRequest demande) {
         String email = demande.email().trim().toLowerCase();
@@ -86,13 +81,7 @@ public class ProfilService {
         return utilisateurs.save(utilisateur);
     }
 
-    /** Modifier nom, prénom, e-mail et téléphone. Le rôle ne se modifie pas ici. */
     @Transactional
-    /**
-     * Modifier nom, prénom, e-mail, téléphone et, pour un utilisateur, son campus et sa faculté.
-     * Le rôle ne se modifie pas ici. Le campus d'un responsable est attribué par l'administrateur :
-     * sinon il pourrait se donner accès aux pannes d'un autre campus.
-     */
     public ProfilDto modifier(Long utilisateurId, ProfilRequest demande) {
         Utilisateur utilisateur = connecte(utilisateurId);
 
@@ -129,7 +118,6 @@ public class ProfilService {
         return versDto(utilisateur);
     }
 
-    /** Vérifie que le campus et la faculté existent et vont ensemble ; renvoie la faculté. */
     private Unite verifierAffectation(Long campusId, Long uniteId) {
         Campus campus = campusRepo.findById(campusId)
                 .orElseThrow(() -> new ErreurChamp("campusId", "Campus inconnu."));
@@ -141,7 +129,7 @@ public class ProfilService {
         return unite;
     }
 
-    /** Changer le mot de passe : il faut connaître l'ancien, et confirmer le nouveau. */
+
     @Transactional
     public void changerMotDePasse(Long utilisateurId, MotDePasseRequest demande) {
         Utilisateur utilisateur = connecte(utilisateurId);
@@ -160,10 +148,6 @@ public class ProfilService {
         utilisateurs.save(utilisateur);
     }
 
-    /**
-     * Remplacer la photo de profil. On vérifie la taille et le VRAI format de l'image
-     * (les premiers octets du fichier), pas seulement son nom ou le type annoncé par le navigateur.
-     */
     @Transactional
     public ProfilDto changerPhoto(Long utilisateurId, MultipartFile fichier) {
         Utilisateur utilisateur = connecte(utilisateurId);
@@ -196,18 +180,12 @@ public class ProfilService {
         return photos.findById(utilisateurId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucune photo."));
     }
-
-    /**
-     * L'adresse de la photo, ou null s'il n'y en a pas. Le "?v=" change à chaque nouvelle photo :
-     * le navigateur ne montre donc jamais l'ancienne version gardée en cache.
-     */
     public String photoUrl(Long utilisateurId) {
         return photos.dateMiseAJour(utilisateurId)
                 .map(date -> "/api/profil/photo?v=" + date.toString().replaceAll("[^0-9]", ""))
                 .orElse(null);
     }
 
-    // ------------------------------------------------------------------
 
     private Utilisateur connecte(Long id) {
         return utilisateurs.findById(id)
@@ -224,10 +202,13 @@ public class ProfilService {
     }
 
     private static String libelleRole(Role role) {
-        return role == Role.RESPONSABLE ? "Responsable technique" : "Utilisateur";
+        return switch (role) {
+            case RESPONSABLE -> "Responsable technique";
+            case ADMIN -> "Administrateur";
+            case UTILISATEUR -> "Utilisateur";
+        };
     }
 
-    /** JPEG commence par FF D8 FF ; PNG par 89 50 4E 47. Autre chose : refusé. */
     private static String detecterType(byte[] o) {
         if (o.length > 4 && (o[0] & 0xFF) == 0xFF && (o[1] & 0xFF) == 0xD8 && (o[2] & 0xFF) == 0xFF) {
             return "image/jpeg";

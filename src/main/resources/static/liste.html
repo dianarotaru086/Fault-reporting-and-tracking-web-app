@@ -52,7 +52,7 @@
         const utilisateur = await exigerConnexion();
         if (!utilisateur) return;
 
-        // La mise en page recrée la page : on cherche les éléments APRÈS cet appel.
+
         afficherMiseEnPage(utilisateur, "liste");
 
         const formulaire = document.getElementById("filtres");
@@ -72,8 +72,7 @@
             structure.forEach(c => selectCampus.add(new Option(campusCourt(c.nom), c.id)));
         }
 
-        // Sans campus choisi : toutes les facultés, rangées par campus.
-        // Avec un campus : seulement les siennes.
+
         function remplirUnites() {
             const campusChoisi = selectCampus.value;
             const precedent = selectUnite.value;
@@ -93,7 +92,6 @@
             selectUnite.value = existe ? precedent : "";
         }
 
-        // Construit l'adresse avec uniquement les critères remplis
         function adresse() {
             const params = new URLSearchParams();
             for (const id of ["q", "campusId", "uniteId", "categorie", "statut", "priorite"]) {
@@ -122,7 +120,6 @@
             }
         }
 
-        // Menus déroulants, puis première liste
         try {
             const [references, campusEtUnites] = await Promise.all([
                 api("/api/references"), api("/api/structure")]);
