@@ -1,4 +1,4 @@
-# Application web de signalement et de suivi des pannes dans un établissement.
+# Application web de signalement et de suivi des pannes dans un établissement
 
 
 Équipe QWERTY: ROTARU Diana Maria, BARBIER Ileana Geneviève 
